@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>텍사스 빙고 카드 매니저</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Serif+KR:wght@400;700&family=Rye&display=swap');
+        
+        :root {
+            --west-gold: #d4af37;
+            --west-brown: #3e2723;
+            --west-leather: #5d4037;
+            --west-paper: #e6d5b8;
+        }
+
+        body {
+            background-color: #1a0f0a;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),
+                url('https://www.transparenttextures.com/patterns/dark-leather.png');
+            font-family: 'Noto Serif KR', serif;
+            user-select: none;
+        }
+
+        .western-font {
+            font-family: 'Black Han Sans', sans-serif;
+        }
+
+        /* 서양 고전 폰트 (Rye) 적용 */
+        .classic-west {
+            font-family: 'Rye', cursive;
+        }
+
+        .vintage-paper {
+            background-color: var(--west-paper);
+            background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+            box-shadow: inset 0 0 60px rgba(101, 67, 33, 0.3), 5px 10px 20px rgba(0,0,0,0.6);
+            border: 1px solid #c4a484;
+        }
+
+        .wooden-sign-title {
+            background: #4e342e;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            border: 3px solid #2a1b15;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            color: #f5f5f5;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .leather-btn {
+            background: linear-gradient(to bottom, #8d6e63, #3e2723);
+            border: 2px solid #26140d;
+            color: #ede7f6;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
+            border-bottom-width: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .leather-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://www.transparenttextures.com/patterns/leather.png');
+            opacity: 0.2;
+            pointer-events: none;
+        }
+
+        .leather-btn:active { 
+            transform: translateY(3px); 
+            border-bottom-width: 3px;
+        }
+
+        .leather-btn.active { 
+            border-color: var(--west-gold); 
+            box-shadow: 0 0 15px var(--west-gold); 
+            border-bottom-width: 6px;
+        }
+
+        /* 카드 뒤집기 애니메이션 */
+        .perspective-1000 { perspective: 1000px; }
+        .card-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .card-inner.is-flipped { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 0.25rem;
+        }
+        .card-back { transform: rotateY(180deg); }
+        
+        .app-container {
+            max-width: 28rem;
+            width: 100%;
+            background-color: var(--west-brown);
+            background-image: url('https://www.transparenttextures.com/patterns/burnt-paper.png');
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 6px double var(--west-leather);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+
+        /* 사막 느낌 오버레이 */
+        .sand-dust {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 60%, rgba(212, 175, 55, 0.05));
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .gold-trim {
+            border: 1px solid var(--west-gold);
+            padding: 2px;
+        }
+    </style>
+</head>
+<body class="text-stone-100 min-h-screen flex flex-col items-center p-4">
+
+    <!-- Start Screen -->
+    <div id="setup-screen" class="app-container text-center flex flex-col justify-center min-h-[600px]">
+        <div class="sand-dust"></div>
+        <header class="mb-12 relative z-10">
+            <h1 class="text-4xl font-bold text-[#d4af37] mb-3 classic-west tracking-widest drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)]">TEXAS BINGO</h1>
+            <h2 class="text-xl font-bold text-[#d4af37]/80 classic-west tracking-[0.2em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">CARD SHUFFLER</h2>
+            <div class="w-32 h-1 bg-[#d4af37] mx-auto mt-6 shadow-lg"></div>
+        </header>
+
+        <div class="grid grid-cols-1 gap-5 mb-12 px-6 relative z-10">
+            <button onclick="setPlayerCount(2)" class="player-opt-btn leather-btn py-5 rounded-lg text-2xl classic-west tracking-widest" data-count="2">2 PLAYERS</button>
+            <button onclick="setPlayerCount(3)" class="player-opt-btn leather-btn py-5 rounded-lg text-2xl classic-west tracking-widest" data-count="3">3 PLAYERS</button>
+            <button onclick="setPlayerCount(4)" class="player-opt-btn leather-btn py-5 rounded-lg text-2xl classic-west tracking-widest" data-count="4">4 PLAYERS</button>
+        </div>
+
+        <button onclick="startGame()" id="start-btn" class="mx-6 bg-[#d4af37] text-black py-5 rounded-lg text-2xl classic-west tracking-widest opacity-50 cursor-not-allowed transition-all border-b-6 border-[#9a7e28] active:border-b-2 active:translate-y-[4px]" disabled>
+            START ADVENTURE
+        </button>
+    </div>
+
+    <!-- Main Game UI -->
+    <div id="game-screen" class="hidden app-container">
+        <div class="sand-dust"></div>
+        <header class="text-center mb-6 relative z-10">
+            <h1 class="text-3xl font-bold text-[#d4af37] classic-west tracking-tighter">TEXAS BINGO</h1>
+            <p id="player-indicator" class="text-[#a1887f] text-[10px] uppercase tracking-[0.3em] font-bold mt-1">Ready to Play</p>
+        </header>
+
+        <div class="flex justify-between items-center mb-6 bg-black/40 p-4 rounded-lg border-2 border-[#5d4037] relative z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full border border-[#d4af37] flex items-center justify-center bg-stone-900 shadow-inner">
+                    <span class="text-[#d4af37]">🎯</span>
+                </div>
+                <div>
+                    <span class="text-[9px] uppercase tracking-widest text-[#8d6e63] font-bold">REMAINING CARDS</span>
+                    <div id="deck-count" class="text-xl font-mono font-bold text-[#ff9800]">64 / 64</div>
+                </div>
+            </div>
+            <button onclick="location.reload()" class="leather-btn px-4 py-2 rounded-md text-[10px] font-bold uppercase classic-west tracking-widest">Quit</button>
+        </div>
+
+        <!-- Card Area -->
+        <div id="card-area" class="relative h-80 w-full flex items-center justify-center gap-2 mb-8 relative z-10">
+            <div id="card-display-1" class="vintage-paper w-56 h-72 rounded-sm border-2 border-[#5d4037] flex flex-col items-center justify-center text-center p-0 shadow-2xl relative overflow-hidden">
+                <div class="opacity-10 absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/scratched-metal.png')]"></div>
+                <span class="text-stone-700 italic classic-west text-2xl opacity-30">TEXAS</span>
+            </div>
+            <div id="card-display-2" class="hidden vintage-paper w-56 h-72 rounded-sm border-2 border-[#5d4037] flex flex-col items-center justify-center text-center p-0 shadow-2xl relative overflow-hidden">
+            </div>
+        </div>
+
+        <!-- Tunnel View -->
+        <div id="tunnel-container" class="hidden grid grid-cols-2 gap-3 mb-8 min-h-[18rem] relative z-10"></div>
+
+        <button id="draw-btn" onclick="handleDrawClick()" class="w-full leather-btn py-5 rounded-lg shadow-2xl transition-all text-2xl classic-west tracking-widest relative z-10">
+            DRAW CARD
+        </button>
+
+        <div id="event-desc-panel" class="hidden mt-4 p-4 bg-[#26140d]/80 rounded-lg border-2 border-[#d4af37]/30 relative z-10">
+            <div class="flex gap-2 items-start">
+                <span class="text-[#d4af37] text-lg">📜</span>
+                <p id="event-desc-text" class="text-[12px] text-[#e6d5b8] leading-relaxed font-medium italic"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Panel -->
+    <div id="history-panel" class="hidden mt-8 w-full max-w-md relative z-10">
+        <div class="flex items-center gap-2 px-2 mb-2">
+            <div class="h-[1px] flex-1 bg-[#5d4037]"></div>
+            <h3 class="text-[10px] font-bold text-[#8d6e63] uppercase tracking-[0.4em]">GAME LOGS</h3>
+            <div class="h-[1px] flex-1 bg-[#5d4037]"></div>
+        </div>
+        <div id="history" class="flex flex-wrap gap-2 px-2"></div>
+    </div>
+
+    <script>
+        let deck = [];
+        let history = [];
+        let playerCount = 0;
+        let isForkActive = false;
+        let tunnelPhase = 0;
+        let initialDeckSize = 0;
+
+        const suits = ['♠', '♥', '♦', '♣'];
+        const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const sandstormPatterns = [
+            { name: "좌측 상단", indices: [0, 1, 2, 5, 6, 7, 10, 11, 12] },
+            { name: "우측 상단", indices: [2, 3, 4, 7, 8, 9, 12, 13, 14] },
+            { name: "좌측 하단", indices: [10, 11, 12, 15, 16, 17, 20, 21, 22] },
+            { name: "우측 하단", indices: [12, 13, 14, 17, 18, 19, 22, 23, 24] }
+        ];
+
+        function setPlayerCount(num) {
+            playerCount = num;
+            document.querySelectorAll('.player-opt-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.count) === num);
+            });
+            const startBtn = document.getElementById('start-btn');
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            startBtn.classList.add('hover:brightness-125');
+        }
+
+        function startGame() {
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('history-panel').classList.remove('hidden');
+            document.getElementById('player-indicator').innerText = `${playerCount} PLAYERS GAME`;
+            initDeck();
+        }
+
+        function initDeck() {
+            deck = [];
+            // 숫자/문양 카드 52장 (13 * 4)
+            suits.forEach(suit => values.forEach(val => deck.push({ type: 'normal', suit, val, label: suit + val })));
+            
+            // 조커(OUTLAW) 제거 요청에 따라 주석 처리 또는 삭제
+            // deck.push({ type: 'joker', label: 'OUTLAW', color: 'black' }, { type: 'joker', label: 'OUTLAW', color: 'red' });
+            
+            // 이벤트 카드 12장 (4 * 3종)
+            for(let i=0; i<4; i++) deck.push({ type: 'event', name: '갈림길', desc: '두 갈래 길입니다. 각자 원하는 한 장을 골라 입력하십시오.' });
+            for(let i=0; i<4; i++) deck.push({ type: 'event', name: '터널', desc: '어두운 터널입니다. 인원수만큼 뒷면으로 뽑아 각자 확인하십시오.' });
+            for(let i=0; i<4; i++) deck.push({ type: 'event', name: '모래바람', desc: '모래바람이 시야를 가립니다. 표시된 구역은 입력 불가입니다.', patternIndex: i });
+            
+            initialDeckSize = deck.length;
+            shuffle();
+            updateUI();
+        }
+
+        function shuffle() {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function handleDrawClick() {
+            if (tunnelPhase === 2) {
+                tunnelPhase = 0;
+                document.getElementById('tunnel-container').classList.add('hidden');
+                document.getElementById('card-area').classList.remove('hidden');
+                updateUI();
+                return;
+            }
+
+            if (tunnelPhase === 1) {
+                tunnelPhase = 2;
+                displayTunnelSecretCards();
+                updateUI();
+                return;
+            }
+
+            if (isForkActive) {
+                const drawn = drawValidCards(2);
+                displayForkCards(drawn);
+                isForkActive = false;
+            } else {
+                if (deck.length === 0) return;
+                const card = deck.pop();
+                if (card.name === '터널') {
+                    tunnelPhase = 1;
+                    displaySingleCard(card);
+                } else if (card.name === '갈림길') {
+                    isForkActive = true;
+                    displaySingleCard(card);
+                } else {
+                    displaySingleCard(card);
+                }
+            }
+            updateUI();
+        }
+
+        function drawValidCards(count) {
+            const result = [];
+            const temp = [];
+            while(result.length < count && deck.length > 0) {
+                const c = deck.pop();
+                if (c.type !== 'event') result.push(c);
+                else temp.push(c);
+            }
+            deck.push(...temp.reverse());
+            return result;
+        }
+
+        function displaySingleCard(card) {
+            const display1 = document.getElementById('card-display-1');
+            document.getElementById('card-display-2').classList.add('hidden');
+            addToHistory(card);
+            renderCard(display1, card);
+            showEventDesc(card);
+        }
+
+        function displayForkCards(cards) {
+            const d1 = document.getElementById('card-display-1');
+            const d2 = document.getElementById('card-display-2');
+            d2.classList.remove('hidden');
+            cards.forEach(c => addToHistory(c));
+            if (cards[0]) renderCard(d1, cards[0]);
+            if (cards[1]) renderCard(d2, cards[1]);
+        }
+
+        function displayTunnelSecretCards() {
+            const container = document.getElementById('tunnel-container');
+            const cardArea = document.getElementById('card-area');
+            
+            cardArea.classList.add('hidden');
+            container.classList.remove('hidden');
+            container.innerHTML = '';
+
+            const tunnelCards = drawValidCards(playerCount);
+
+            tunnelCards.forEach((card, idx) => {
+                const cardWrapper = document.createElement('div');
+                cardWrapper.className = "relative h-44 perspective-1000";
+                cardWrapper.innerHTML = `
+                    <div class="card-inner w-full h-full relative" onclick="this.classList.toggle('is-flipped')">
+                        <div class="card-front vintage-paper border-2 border-[#5d4037] flex flex-col items-center justify-center rounded-lg shadow-xl">
+                            <div class="absolute inset-2 border border-[#d4af37]/20 rounded"></div>
+                            <span class="text-stone-500 classic-west text-[10px] mb-2 uppercase">Player ${idx+1}</span>
+                            <div class="text-4xl text-stone-300">?</div>
+                        </div>
+                        <div class="card-back vintage-paper border-2 border-[#5d4037] flex flex-col items-center justify-center rounded-lg shadow-xl">
+                            <div id="tunnel-content-${idx}" class="flex flex-col items-center w-full"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(cardWrapper);
+                renderCard(cardWrapper.querySelector(`#tunnel-content-${idx}`), card, true);
+            });
+        }
+
+        function renderCard(element, card, isSmall = false) {
+            element.innerHTML = '';
+            const sizeClass = isSmall ? 'text-4xl' : 'text-8xl';
+            const valClass = isSmall ? 'text-2xl' : 'text-6xl';
+
+            if (card.type === 'normal') {
+                const color = (card.suit === '♥' || card.suit === '♦') ? 'text-red-800' : 'text-stone-900';
+                element.innerHTML = `
+                    <div class="${color} ${sizeClass} mb-2 drop-shadow-md">${card.suit}</div>
+                    <div class="${color} ${valClass} classic-west">${card.val}</div>
+                `;
+            } else if (card.type === 'event') {
+                let body = card.name === '모래바람' ? renderSandstormGrid(sandstormPatterns[card.patternIndex]) : renderEventIcon(card.name);
+                element.innerHTML = `
+                    <div class="w-full pt-4 px-3 relative h-full flex flex-col items-center">
+                        <div class="wooden-sign-title w-full py-2 px-1 mb-4 classic-west text-xl tracking-widest">${card.name}</div>
+                        <div class="flex flex-col items-center justify-start w-full">${body}</div>
+                        <div class="absolute bottom-4 left-3 right-3 bg-black/10 border-t border-stone-400/50 pt-2">
+                            <p class="text-[10px] text-stone-900 font-bold leading-tight text-center">${card.desc}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderSandstormGrid(pattern) {
+            let html = `<div class="grid grid-cols-5 gap-0.5 w-24 h-24 bg-stone-700 p-1 border-2 border-stone-900 shadow-inner">`;
+            for(let i=0; i<25; i++) html += `<div class="w-full h-full ${pattern.indices.includes(i) ? 'bg-orange-800 animate-pulse' : 'bg-stone-200'}"></div>`;
+            return html + `</div><div class="mt-2 bg-[#d4af37] text-black px-3 py-1 rounded text-[10px] classic-west tracking-tighter shadow-md">${pattern.name}</div>`;
+        }
+
+        function renderEventIcon(name) {
+            if (name === '갈림길') return `
+                <div class="relative w-32 h-28 flex items-center justify-center mt-2">
+                    <div class="absolute h-full w-2 bg-[#3e2723] border-x border-black/40 shadow-lg"></div>
+                    <div class="absolute left-[-15px] top-4 w-20 h-10 bg-[#5d4037] border-2 border-[#26140d] shadow-xl flex items-center justify-center rotate-[-8deg] z-10">
+                        <div class="w-6 h-8 bg-white/80 border border-stone-400 rotate-2"></div>
+                    </div>
+                    <div class="absolute right-[-15px] top-12 w-20 h-10 bg-[#5d4037] border-2 border-[#26140d] shadow-xl flex items-center justify-center rotate-[8deg] z-10">
+                        <div class="w-6 h-8 bg-white/80 border border-stone-400 -rotate-2"></div>
+                    </div>
+                </div>
+            `;
+            if (name === '터널') return `
+                <div class="relative w-32 h-24 bg-[#1a0f0a] rounded-t-full border-4 border-[#3e2723] flex items-center justify-center overflow-hidden shadow-2xl mt-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-transparent to-black opacity-60"></div>
+                    <div class="w-12 h-16 bg-white rounded-sm border-2 border-stone-400 flex items-center justify-center font-bold text-stone-800 text-3xl shadow-2xl classic-west z-10">?</div>
+                    <div class="absolute bottom-0 w-full h-2 bg-stone-800"></div>
+                </div>
+            `;
+            return '';
+        }
+
+        function addToHistory(card) {
+            history.unshift(card);
+            if(history.length > 20) history.pop();
+            updateHistory();
+        }
+
+        function updateHistory() {
+            const container = document.getElementById('history');
+            container.innerHTML = history.map((c, i) => {
+                let color = 'text-stone-400';
+                let content = c.type === 'event' ? c.name : c.label;
+                if (c.type === 'event') color = 'text-[#d4af37] font-bold';
+                else if (c.suit === '♥' || c.suit === '♦') color = 'text-red-500';
+                return `<div class="px-2 py-1 bg-stone-900/80 border border-[#5d4037] rounded text-[9px] ${i === 0 ? 'ring-1 ring-[#d4af37]' : ''} ${color} classic-west">${content}</div>`;
+            }).join('');
+        }
+
+        function showEventDesc(card) {
+            const panel = document.getElementById('event-desc-panel');
+            const text = document.getElementById('event-desc-text');
+            if (card.type === 'event') {
+                text.innerHTML = card.desc + (card.name === '갈림길' ? "<br><span class='text-[#d4af37] text-[10px]'>[다음 카드 2장을 확인하십시오]</span>" : "");
+                panel.classList.remove('hidden');
+            } else { panel.classList.add('hidden'); }
+        }
+
+        function updateUI() {
+            document.getElementById('deck-count').innerText = `${deck.length} / ${initialDeckSize || 64}`;
+            const btn = document.getElementById('draw-btn');
+            
+            if (tunnelPhase === 1) {
+                btn.innerText = "ENTER TUNNEL";
+                btn.style.background = 'linear-gradient(to bottom, #d4af37, #9a7e28)';
+                btn.style.color = '#000';
+            } else if (tunnelPhase === 2) {
+                btn.innerText = "LEAVE TUNNEL";
+                btn.style.background = 'linear-gradient(to bottom, #424242, #212121)';
+                btn.style.color = '#fff';
+            } else {
+                btn.innerText = isForkActive ? "CHOOSE PATH" : "DRAW CARD";
+                btn.style.background = '';
+                btn.style.color = '';
+            }
+            
+            if (deck.length === 0 && !isForkActive && tunnelPhase === 0) {
+                btn.disabled = true;
+                btn.innerText = "EMPTY DECK";
+                btn.classList.add('opacity-50');
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+    </script>
+</body>
+</html>
