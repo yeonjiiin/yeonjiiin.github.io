@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GANZ SCHÖN CLEVER HELPER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #121212; color: #ffffff; font-family: 'sans-serif'; touch-action: manipulation; }
+        
+        /* 주사위 스타일 */
+        .die { 
+            width: 58px; 
+            height: 58px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 1.8rem; 
+            font-weight: 900; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            border: 3px solid transparent; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+        .die:active { transform: scale(0.92); }
+        
+        /* 주사위 색상 */
+        .die-yellow { background-color: #fbbf24; color: #1a1a1a; }
+        .die-blue { background-color: #3b82f6; color: #ffffff; }
+        .die-green { background-color: #22c55e; color: #ffffff; }
+        .die-orange { background-color: #f97316; color: #ffffff; }
+        .die-purple { background-color: #a855f7; color: #ffffff; }
+        .die-white { background-color: #ffffff; color: #1a1a1a; border: 3px solid #cbd5e1; }
+        
+        /* 그리드 및 영역 */
+        .dice-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 10px; }
+        .tray-zone { border: 2px dashed #334155; border-radius: 20px; background-color: #1e293b; min-height: 80px; padding: 12px; }
+        .section-title { font-size: 0.65rem; color: #64748b; font-weight: 800; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em; }
+        
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        /* 굴리기 애니메이션 */
+        @keyframes roll {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        .rolling { animation: roll 0.2s ease-in-out; }
+
+        /* 초기 설정 화면 전용 */
+        #setup-screen { 
+            position: fixed; 
+            inset: 0; 
+            background: #0f172a; 
+            z-index: 1000; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 2rem; 
+        }
+        #setup-screen.hidden { display: none !important; }
+
+        /* 인원 선택 버튼 스타일 (제목과 동일한 노란색 #fbbf24 배경) */
+        .player-select-btn {
+            aspect-ratio: 1 / 1;
+            background-color: #fbbf24; /* 노란색 배경 */
+            color: #1a1a1a; /* 검은색 텍스트 */
+            border: 2px solid #d97706; /* 약간 더 어두운 테두리 */
+            border-radius: 1.5rem;
+            font-weight: 900;
+            font-size: 1.875rem;
+            transition: all 0.2s;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .player-select-btn:hover { background-color: #fcd34d; transform: translateY(-2px); }
+        .player-select-btn:active { transform: scale(0.95); }
+
+        /* 주사위 모양 리셋 버튼 */
+        .die-reset-btn {
+            width: 32px;
+            height: 32px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 900;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .die-reset-btn:active { transform: scale(0.9); background-color: #dc2626; }
+
+        /* 커스텀 모달 (경고창) */
+        #reset-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        #reset-modal.active { display: flex; }
+
+        /* 선택된 주사위 칸 (중간 회색 배경) */
+        #selected-dice {
+            background-color: #e2e8f0; /* Slate 200: 명확한 회색 */
+            min-height: 80px;
+            padding: 12px;
+            border-radius: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.15);
+            border: 2px solid #94a3b8;
+        }
+    </style>
+</head>
+<body class="p-4 max-w-md mx-auto min-h-screen flex flex-col">
+
+    <!-- 인원 선택 설정 화면 -->
+    <div id="setup-screen">
+        <h1 class="text-3xl font-black text-yellow-500 italic mb-8 tracking-tighter text-center uppercase">GANZ SCHÖN CLEVER</h1>
+        <p class="text-slate-400 mb-6 font-bold uppercase text-xs tracking-widest">Select Number of Players</p>
+        <div class="grid grid-cols-3 gap-4 w-full max-w-xs">
+            <button onclick="startGame(2)" class="player-select-btn">2</button>
+            <button onclick="startGame(3)" class="player-select-btn">3</button>
+            <button onclick="startGame(4)" class="player-select-btn">4</button>
+        </div>
+        <p class="mt-8 text-slate-500 text-[10px] text-center uppercase tracking-tighter leading-relaxed">
+            2 Players: 6 Rounds<br>
+            3 Players: 5 Rounds<br>
+            4 Players: 4 Rounds
+        </p>
+    </div>
+
+    <!-- 메인 게임 화면 -->
+    <div id="game-ui" class="hidden flex flex-col flex-grow">
+        <header class="flex justify-between items-center py-3 mb-2 border-b border-white/10">
+            <!-- 왼쪽: 라운드 정보 -->
+            <div class="flex flex-col">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Round</p>
+                <div id="round-display" class="text-2xl font-black text-yellow-500 leading-none">1 / 6</div>
+            </div>
+            
+            <!-- 오른쪽: 플레이어 정보 및 리셋 -->
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col items-end">
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Current Player</p>
+                    <div id="player-display" class="text-xl font-black text-white leading-none">Player 1</div>
+                </div>
+                <!-- 주사위 모양 리셋 버튼 -->
+                <button onclick="showResetModal()" class="die-reset-btn" title="Reset Game">R</button>
+            </div>
+        </header>
+
+        <main class="flex-grow space-y-5">
+            <div class="bg-white/5 p-4 rounded-3xl border border-white/10">
+                <h2 class="section-title">ACTIVE DICE & ACTION</h2>
+                <div class="flex items-center justify-center gap-6">
+                    <div id="active-dice" class="dice-grid"></div>
+                    <button id="roll-btn" onclick="rollDice()" class="w-20 h-20 bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-2xl font-black text-sm shadow-lg border border-white/10 transition-all active:scale-95 flex items-center justify-center text-center leading-tight">
+                        DICE<br>ROLL
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="section-title">SELECTED (MAX 3)</h2>
+                <div id="selected-dice"></div>
+            </div>
+
+            <div>
+                <h2 class="section-title">SILVER TRAY</h2>
+                <div id="silver-tray" class="tray-zone flex flex-wrap gap-3 justify-center items-center"></div>
+            </div>
+        </main>
+
+        <footer class="mt-6 pb-8 space-y-3">
+            <div id="status-message" class="text-center text-[10px] text-yellow-600 font-bold h-4"></div>
+            <div class="flex gap-3">
+                <button onclick="nextTurn()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl font-bold transition-colors text-xs uppercase tracking-wider">
+                    Next Turn
+                </button>
+                <button id="undo-btn" onclick="undoLastAction()" class="flex-1 bg-red-950/20 hover:bg-red-900/30 text-red-500 py-3 rounded-xl font-bold transition-colors text-xs uppercase tracking-wider">
+                    Cancel Last
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 리셋 확인 모달 -->
+    <div id="reset-modal">
+        <div class="bg-slate-900 border border-white/10 p-6 rounded-3xl w-full max-w-xs text-center shadow-2xl">
+            <div class="w-12 h-12 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="text-2xl font-black">!</span>
+            </div>
+            <h3 class="text-lg font-bold mb-2">게임을 리셋할까요?</h3>
+            <p class="text-slate-400 text-sm mb-6 leading-relaxed">진행 중인 모든 데이터가 삭제되고<br>첫 화면으로 돌아갑니다.</p>
+            <div class="flex gap-3">
+                <button onclick="hideResetModal()" class="flex-1 bg-zinc-800 py-3 rounded-xl font-bold text-xs uppercase">아니오</button>
+                <button onclick="confirmReset()" class="flex-1 bg-red-600 py-3 rounded-xl font-bold text-xs uppercase">네, 리셋합니다</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            numPlayers: 0,
+            maxRounds: 0,
+            currentRound: 1,
+            currentPlayer: 1,
+            dice: [
+                { id: 0, color: 'yellow', value: 1, status: 'active' },
+                { id: 1, color: 'blue', value: 1, status: 'active' },
+                { id: 2, color: 'green', value: 1, status: 'active' },
+                { id: 3, color: 'orange', value: 1, status: 'active' },
+                { id: 4, color: 'purple', value: 1, status: 'active' },
+                { id: 5, color: 'white', value: 1, status: 'active' }
+            ],
+            history: []
+        };
+
+        function startGame(players) {
+            gameState.numPlayers = parseInt(players);
+            if (players === 2) gameState.maxRounds = 6;
+            else if (players === 3) gameState.maxRounds = 5;
+            else if (players === 4) gameState.maxRounds = 4;
+            
+            gameState.currentRound = 1;
+            gameState.currentPlayer = 1;
+            gameState.dice.forEach(d => {
+                d.status = 'active';
+                d.value = 1;
+            });
+            gameState.history = [];
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            
+            updateInfoDisplay();
+            renderDice();
+        }
+
+        function showResetModal() {
+            document.getElementById('reset-modal').classList.add('active');
+        }
+
+        function hideResetModal() {
+            document.getElementById('reset-modal').classList.remove('active');
+        }
+
+        function confirmReset() {
+            hideResetModal();
+            resetToMain();
+        }
+
+        function resetToMain() {
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('game-ui').classList.add('hidden');
+            
+            gameState.currentRound = 1;
+            gameState.currentPlayer = 1;
+            gameState.history = [];
+            gameState.dice.forEach(d => {
+                d.status = 'active';
+                d.value = 1;
+            });
+        }
+
+        function updateInfoDisplay() {
+            document.getElementById('round-display').innerText = `${gameState.currentRound} / ${gameState.maxRounds}`;
+            document.getElementById('player-display').innerText = `Player ${gameState.currentPlayer}`;
+        }
+
+        function saveHistory() {
+            gameState.history.push(JSON.parse(JSON.stringify(gameState.dice)));
+            if (gameState.history.length > 10) gameState.history.shift();
+            updateUndoButton();
+        }
+
+        function rollDice() {
+            const selectedCount = gameState.dice.filter(d => d.status === 'selected').length;
+            if (selectedCount >= 3) return;
+
+            const activeElements = document.querySelectorAll('#active-dice .die');
+            activeElements.forEach(el => el.classList.add('rolling'));
+
+            setTimeout(() => {
+                gameState.dice.forEach(d => {
+                    if (d.status === 'active') {
+                        d.value = Math.floor(Math.random() * 6) + 1;
+                    }
+                });
+                renderDice();
+            }, 150);
+        }
+
+        function selectDie(id) {
+            const die = gameState.dice.find(d => d.id === id);
+            if (!die || die.status !== 'active') return;
+
+            let selectedCount = gameState.dice.filter(d => d.status === 'selected').length;
+            if (selectedCount >= 3) return;
+
+            saveHistory();
+            const val = die.value;
+            die.status = 'selected';
+            selectedCount++;
+
+            gameState.dice.forEach(d => {
+                if (d.status === 'active' && d.id !== id) {
+                    if (d.value < val) d.status = 'silver';
+                }
+            });
+
+            if (selectedCount === 3) {
+                gameState.dice.forEach(d => { if (d.status === 'active') d.status = 'silver'; });
+            }
+
+            renderDice();
+
+            if (selectedCount < 3) {
+                const remainingActive = gameState.dice.filter(d => d.status === 'active').length;
+                if (remainingActive > 0) {
+                    setTimeout(() => rollDice(), 400);
+                }
+            }
+        }
+
+        function undoLastAction() {
+            if (gameState.history.length === 0) return;
+            gameState.dice = gameState.history.pop();
+            renderDice();
+            updateUndoButton();
+        }
+
+        function nextTurn() {
+            if (gameState.currentPlayer < gameState.numPlayers) {
+                gameState.currentPlayer++;
+            } else {
+                if (gameState.currentRound < gameState.maxRounds) {
+                    gameState.currentRound++;
+                    gameState.currentPlayer = 1;
+                } else {
+                    alert("게임 종료! 모든 라운드가 끝났습니다.");
+                    resetToMain();
+                    return;
+                }
+            }
+            
+            gameState.history = [];
+            gameState.dice.forEach(d => {
+                d.status = 'active';
+                d.value = 1;
+            });
+            updateInfoDisplay();
+            renderDice();
+        }
+
+        function updateUndoButton() {
+            const undoBtn = document.getElementById('undo-btn');
+            if (undoBtn) undoBtn.disabled = gameState.history.length === 0;
+        }
+
+        function renderDice() {
+            const activeDiv = document.getElementById('active-dice');
+            const selectedDiv = document.getElementById('selected-dice');
+            const silverDiv = document.getElementById('silver-tray');
+            const rollBtn = document.getElementById('roll-btn');
+            const statusMsg = document.getElementById('status-message');
+
+            if (!activeDiv || !selectedDiv || !silverDiv) return;
+
+            activeDiv.innerHTML = '';
+            selectedDiv.innerHTML = '';
+            silverDiv.innerHTML = '';
+
+            gameState.dice.forEach(d => {
+                const el = document.createElement('div');
+                el.className = `die die-${d.color}`;
+                el.innerText = d.value;
+                el.onclick = () => selectDie(d.id);
+
+                if (d.status === 'active') activeDiv.appendChild(el);
+                else if (d.status === 'selected') selectedDiv.appendChild(el);
+                else if (d.status === 'silver') silverDiv.appendChild(el);
+            });
+
+            const selectedCount = gameState.dice.filter(d => d.status === 'selected').length;
+            if (selectedCount >= 3) {
+                rollBtn.disabled = true;
+                rollBtn.innerText = "DONE";
+                rollBtn.style.backgroundColor = "#1e293b"; 
+                statusMsg.innerText = "3 DICE SELECTED";
+            } else {
+                rollBtn.disabled = false;
+                rollBtn.innerHTML = "DICE<br>ROLL";
+                rollBtn.style.backgroundColor = "#0f172a"; 
+                statusMsg.innerText = "";
+            }
+            updateUndoButton();
+        }
+    </script>
+</body>
+</html>
