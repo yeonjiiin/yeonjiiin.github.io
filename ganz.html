@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>영리한 여우 주사위 헬퍼</title>
+    <title>GANZ SCHÖN CLEVER HELPER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #121212; color: #ffffff; font-family: 'sans-serif'; touch-action: manipulation; }
@@ -31,7 +31,7 @@
         .die-green { background-color: #22c55e; color: #ffffff; }
         .die-orange { background-color: #f97316; color: #ffffff; }
         .die-purple { background-color: #a855f7; color: #ffffff; }
-        .die-white { background-color: #ffffff; color: #1a1a1a; border: 3px solid #e2e8f0; }
+        .die-white { background-color: #ffffff; color: #1a1a1a; border: 3px solid #cbd5e1; }
         
         /* 그리드 및 영역 */
         .dice-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 10px; }
@@ -62,19 +62,19 @@
         }
         #setup-screen.hidden { display: none !important; }
 
-        /* 인원 선택 버튼 스타일 */
+        /* 인원 선택 버튼 스타일 (제목과 동일한 노란색 #fbbf24 배경) */
         .player-select-btn {
             aspect-ratio: 1 / 1;
-            background-color: #1e293b;
-            color: #fbbf24;
-            border: 2px solid #334155;
+            background-color: #fbbf24; /* 노란색 배경 */
+            color: #1a1a1a; /* 검은색 텍스트 */
+            border: 2px solid #d97706; /* 약간 더 어두운 테두리 */
             border-radius: 1.5rem;
             font-weight: 900;
             font-size: 1.875rem;
             transition: all 0.2s;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
-        .player-select-btn:hover { background-color: #334155; border-color: #fbbf24; }
+        .player-select-btn:hover { background-color: #fcd34d; transform: translateY(-2px); }
         .player-select-btn:active { transform: scale(0.95); }
 
         /* 주사위 모양 리셋 버튼 */
@@ -108,13 +108,27 @@
             padding: 20px;
         }
         #reset-modal.active { display: flex; }
+
+        /* 선택된 주사위 칸 (중간 회색 배경) */
+        #selected-dice {
+            background-color: #e2e8f0; /* Slate 200: 명확한 회색 */
+            min-height: 80px;
+            padding: 12px;
+            border-radius: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.15);
+            border: 2px solid #94a3b8;
+        }
     </style>
 </head>
 <body class="p-4 max-w-md mx-auto min-h-screen flex flex-col">
 
     <!-- 인원 선택 설정 화면 -->
     <div id="setup-screen">
-        <h1 class="text-3xl font-black text-yellow-500 italic mb-8 tracking-tighter">GANZ SCHÖN CLEVER</h1>
+        <h1 class="text-3xl font-black text-yellow-500 italic mb-8 tracking-tighter text-center uppercase">GANZ SCHÖN CLEVER</h1>
         <p class="text-slate-400 mb-6 font-bold uppercase text-xs tracking-widest">Select Number of Players</p>
         <div class="grid grid-cols-3 gap-4 w-full max-w-xs">
             <button onclick="startGame(2)" class="player-select-btn">2</button>
@@ -143,7 +157,7 @@
                     <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Current Player</p>
                     <div id="player-display" class="text-xl font-black text-white leading-none">Player 1</div>
                 </div>
-                <!-- 주사위 모양 리셋 버튼 (독립 배치) -->
+                <!-- 주사위 모양 리셋 버튼 -->
                 <button onclick="showResetModal()" class="die-reset-btn" title="Reset Game">R</button>
             </div>
         </header>
@@ -161,7 +175,7 @@
 
             <div>
                 <h2 class="section-title">SELECTED (MAX 3)</h2>
-                <div id="selected-dice" class="flex flex-wrap gap-3 justify-center min-h-[80px] p-3 bg-white/5 rounded-3xl border border-white/10 shadow-inner"></div>
+                <div id="selected-dice"></div>
             </div>
 
             <div>
