@@ -7,162 +7,232 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
         
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
+            font-family: 'Quicksand', sans-serif;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .card-shadow {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        /* 별 배경 효과 */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 3px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-base {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .card-selected {
-            border-color: #3b82f6;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-            transform: translateY(-1rem) scale(1.05);
+            border-color: #facc15; /* 노란색 강조 */
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
+            transform: translateY(-0.75rem) scale(1.05);
             z-index: 10;
         }
 
+        /* 블록 스타일 - 네온 느낌 */
         .block-unit {
-            border: 1px solid rgba(0,0,0,0.1);
-            border-radius: 2px;
+            border-radius: 4px;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.2), 0 0 4px rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .rainbow-bg {
-            background: linear-gradient(135deg, #ef4444, #f59e0b, #3b82f6, #10b981);
+            background: linear-gradient(135deg, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6);
+            background-size: 200% 200%;
+            animation: shimmer 3s linear infinite;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .animate-pop {
-            animation: fadeIn 0.2s ease-out forwards;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .reshuffle-toast {
+            animation: slideUp 0.5s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 버튼 스타일 오버라이드 */
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #8b5cf6);
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #94a3b8;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255,255,255,0.2);
+            color: white;
         }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <!-- 셋업 화면 -->
+    <!-- Setup Screen -->
     <div id="setup-screen" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center animate-pop">
-            <h1 class="text-4xl font-black text-slate-800 mb-2 tracking-tight">LOCUS</h1>
-            <p class="text-slate-500 mb-8 font-medium">보드게임 딜러 어시스턴트</p>
+        <div class="glass-panel p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-pop">
+            <div class="mb-4 inline-block p-3 rounded-full bg-indigo-500/20">
+                <i class="fa-solid fa-rocket text-4xl text-indigo-400"></i>
+            </div>
+            <h1 class="text-5xl font-bold text-white mb-2 tracking-tight drop-shadow-md">LOCUS</h1>
+            <p class="text-indigo-200 mb-8 font-medium">Board Game Dealer Assistant</p>
+            
             <div class="mb-8">
-                <label class="block text-slate-700 font-bold mb-4">플레이어 수</label>
-                <div class="flex justify-center gap-2 sm:gap-4" id="player-count-selector">
-                    <button onclick="setPlayerCount(2)" class="player-btn w-14 h-14 sm:w-16 sm:h-16 rounded-full text-xl font-bold bg-slate-200 text-slate-600 transition-all">2</button>
-                    <button onclick="setPlayerCount(3)" class="player-btn w-14 h-14 sm:w-16 sm:h-16 rounded-full text-xl font-bold bg-blue-600 text-white scale-110 shadow-lg">3</button>
-                    <button onclick="setPlayerCount(4)" class="player-btn w-14 h-14 sm:w-16 sm:h-16 rounded-full text-xl font-bold bg-slate-200 text-slate-600 transition-all">4</button>
-                    <button onclick="setPlayerCount(5)" class="player-btn w-14 h-14 sm:w-16 sm:h-16 rounded-full text-xl font-bold bg-slate-200 text-slate-600 transition-all">5</button>
+                <label class="block text-indigo-100 font-bold mb-4 text-lg">플레이어 수 설정</label>
+                <div class="flex justify-center gap-3" id="player-count-selector">
+                    <button onclick="setPlayerCount(2)" class="player-btn w-14 h-14 rounded-2xl text-xl font-bold bg-slate-700 text-slate-400 transition-all border border-slate-600 hover:bg-slate-600">2</button>
+                    <button onclick="setPlayerCount(3)" class="player-btn w-14 h-14 rounded-2xl text-xl font-bold bg-indigo-500 text-white scale-110 shadow-lg border border-indigo-400 shadow-indigo-500/50">3</button>
+                    <button onclick="setPlayerCount(4)" class="player-btn w-14 h-14 rounded-2xl text-xl font-bold bg-slate-700 text-slate-400 transition-all border border-slate-600 hover:bg-slate-600">4</button>
+                    <button onclick="setPlayerCount(5)" class="player-btn w-14 h-14 rounded-2xl text-xl font-bold bg-slate-700 text-slate-400 transition-all border border-slate-600 hover:bg-slate-600">5</button>
                 </div>
             </div>
-            <div class="mb-8 p-4 bg-blue-50 rounded-xl">
-                <p id="round-info-text" class="text-blue-700 font-bold">3인 플레이: 총 5라운드 진행</p>
+            
+            <div class="mb-8 p-4 bg-indigo-900/30 rounded-2xl border border-indigo-500/20">
+                <p id="round-info-text" class="text-indigo-200 font-medium text-sm">3인 플레이 시작합니다.</p>
             </div>
-            <button onclick="initGame()" class="w-full py-4 bg-slate-800 text-white rounded-xl text-lg font-bold hover:bg-slate-700 transition-all active:scale-95">
-                게임 시작
+            
+            <button onclick="initGame()" class="w-full py-4 btn-primary text-white rounded-2xl text-lg font-bold transition-all active:scale-95">
+                START GAME
             </button>
         </div>
     </div>
 
-    <!-- 메인 게임 화면 -->
+    <!-- Main Game Screen -->
     <div id="game-screen" class="hidden flex flex-col min-h-screen">
-        <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 shadow-sm">
-            <div class="max-w-4xl mx-auto flex justify-between items-end">
+        <header class="glass-panel border-b-0 p-4 sticky top-0 z-20 shadow-lg">
+            <div class="max-w-5xl mx-auto flex justify-between items-end">
                 <div class="flex flex-col">
-                    <span id="round-label" class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Current Round</span>
-                    <div class="flex items-baseline gap-2">
-                        <span id="current-round-display" class="text-3xl font-black text-slate-800">1</span>
-                        <span id="max-round-display" class="text-slate-300 font-bold text-lg">/ 5</span>
+                    <span id="round-label" class="text-[11px] text-indigo-300 font-bold uppercase tracking-widest mb-1">Status</span>
+                    <div class="flex flex-col">
+                        <div class="flex items-baseline gap-2">
+                            <span id="current-round-display" class="text-4xl font-bold text-white drop-shadow-sm">1</span>
+                            <span class="text-indigo-300 font-bold text-lg">ROUND</span>
+                        </div>
+                        <div id="turn-progress-dots" class="flex gap-1.5 mt-2">
+                            <!-- Turn dots -->
+                        </div>
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <div class="bg-slate-100 px-2 py-1.5 rounded-lg flex items-center gap-1.5">
-                        <i class="fa-solid fa-layer-group text-slate-500 text-xs"></i>
-                        <span id="deck-count" class="text-xs font-bold text-slate-700">0</span>
+                    <div class="bg-slate-800/80 px-3 py-2 rounded-xl flex items-center gap-2 border border-slate-600">
+                        <i class="fa-solid fa-layer-group text-indigo-400 text-sm"></i>
+                        <span id="deck-count" class="text-sm font-bold text-slate-200">0</span>
                     </div>
-                    <div id="selection-status" class="px-2 py-1.5 rounded-lg flex items-center gap-1.5 bg-blue-100 text-blue-700 transition-colors">
-                        <i class="fa-solid fa-users text-xs"></i>
-                        <span id="selection-count" class="text-xs font-bold">0/3</span>
+                    <div id="selection-status" class="px-3 py-2 rounded-xl flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 transition-colors">
+                        <i class="fa-solid fa-check-double text-sm"></i>
+                        <span id="selection-count" class="text-sm font-bold">0/0</span>
                     </div>
                     
-                    <button onclick="openResetModal()" class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all group border border-transparent hover:border-red-100">
+                    <button onclick="openResetModal()" class="p-3 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all group">
                         <i class="fa-solid fa-rotate-left text-xl group-active:rotate-[-90deg] transition-transform duration-300"></i>
                     </button>
                 </div>
             </div>
         </header>
 
-        <main class="flex-1 p-6 flex flex-col items-center justify-center max-w-6xl mx-auto w-full">
-            <div id="history-alert" class="hidden mb-6 bg-orange-100 text-orange-700 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 animate-pulse">
-                <i class="fa-solid fa-clock-rotate-left"></i> 과거 라운드 기록을 확인 중입니다.
+        <main class="flex-1 p-6 flex flex-col items-center justify-center max-w-6xl mx-auto w-full overflow-x-hidden relative z-10">
+            <div id="history-alert" class="hidden mb-6 bg-amber-500/20 border border-amber-500/40 text-amber-200 px-5 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 animate-pulse">
+                <i class="fa-solid fa-clock-rotate-left"></i> 과거 기록을 확인 중입니다.
             </div>
 
-            <div id="card-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                <!-- 카드가 동적으로 생성됨 -->
+            <div id="card-container" class="flex flex-wrap justify-center gap-6 pb-24">
+                <!-- Cards generated here -->
             </div>
         </main>
 
-        <footer class="bg-white p-6 border-t border-slate-200 shadow-lg sticky bottom-0">
-            <div class="max-w-xl mx-auto flex gap-4">
-                <button id="prev-btn" onclick="showPreviousRound()" disabled class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 disabled:opacity-30 transition-all">
-                    <i class="fa-solid fa-chevron-left"></i> PREV
-                </button>
+        <footer class="glass-panel p-6 border-t-0 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] sticky bottom-0 z-20">
+            <div class="max-w-xl mx-auto flex flex-col gap-4">
+                <div id="turn-instruction" class="text-center text-sm font-bold text-indigo-200 uppercase tracking-wide">
+                    Player 1
+                </div>
+                <div class="flex gap-4">
+                    <button id="prev-btn" onclick="showPreviousRound()" disabled class="flex-1 py-4 btn-secondary rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-30 transition-all">
+                        <i class="fa-solid fa-chevron-left"></i> PREV
+                    </button>
 
-                <button id="next-btn" onclick="handleNextAction()" disabled class="flex-[2] py-4 bg-slate-100 text-slate-300 rounded-2xl text-xl font-black flex items-center justify-center gap-3 transition-all">
-                    NEXT ROUND
-                </button>
+                    <button id="next-btn" onclick="handleNextAction()" disabled class="flex-[2] py-4 btn-primary text-white rounded-2xl text-xl font-bold flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        CONFIRM
+                    </button>
+                </div>
             </div>
         </footer>
     </div>
 
-    <!-- 커스텀 리셋 모달 -->
-    <div id="reset-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-pop">
-            <div class="flex items-center gap-3 text-red-600 mb-4">
-                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                <h3 class="text-lg font-bold">게임 초기화</h3>
-            </div>
-            <p class="text-slate-600 mb-6 leading-relaxed">
-                현재 진행 중인 게임이 모두 사라집니다.<br/>
-                정말로 인원 선택 화면으로 돌아갈까요?
-            </p>
-            <div class="flex gap-3">
-                <button onclick="closeResetModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">취소</button>
-                <button onclick="performReset()" class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200">초기화 확인</button>
-            </div>
+    <!-- Reshuffle Toast -->
+    <div id="reshuffle-toast" class="hidden fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] reshuffle-toast">
+        <div class="glass-panel bg-slate-900/90 text-indigo-200 px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 border border-indigo-500/50">
+            <i class="fa-solid fa-arrows-rotate animate-spin text-indigo-400"></i>
+            <span class="font-bold text-sm">덱 소진! 사용된 카드를 다시 섞습니다.</span>
         </div>
     </div>
 
-    <!-- 게임 종료 모달 -->
-    <div id="ended-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-pop">
-            <i class="fa-solid fa-trophy text-6xl text-yellow-500 mb-4"></i>
-            <h2 class="text-3xl font-bold text-slate-800 mb-4">게임 종료</h2>
-            <p class="text-slate-600 mb-8 font-medium text-lg">지정된 라운드가 모두 완료되었습니다.<br/>최종 점수를 확인하세요!</p>
-            <button onclick="performReset()" class="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg">
-                <i class="fa-solid fa-house"></i> 메인으로 이동
-            </button>
+    <!-- Reset Modal -->
+    <div id="reset-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="glass-panel bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center animate-pop border-slate-600">
+            <div class="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 text-red-400">
+                <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">게임 초기화</h3>
+            <p class="text-slate-300 mb-8 leading-relaxed text-sm">
+                모든 진행 상황이 우주 저편으로 사라집니다.<br/>
+                설정 화면으로 돌아갈까요?
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeResetModal()" class="flex-1 py-3 btn-secondary rounded-2xl font-bold transition-colors">취소</button>
+                <button onclick="performReset()" class="flex-1 py-3 bg-red-500/80 hover:bg-red-500 text-white rounded-2xl font-bold transition-colors shadow-lg shadow-red-500/30">초기화</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 인원별 라운드 설정 ---
-    const ROUND_LIMITS = {
-        2: 8,
-        3: 5,
-        4: 4,
-        5: 3
-    };
-
-    // --- 카드 데이터 정의 ---
+    // --- Data Definitions ---
     const REGULAR_SHAPES = {
         shape_1: [[1, 1], [1, 0], [1, 1]],
         shape_2: [[1, 1, 1], [0, 1, 0], [0, 1, 0]],
@@ -179,44 +249,51 @@
         joker_3: [[0, 1, 1], [1, 1, 0]],
         joker_4: [[1, 1]]
     };
+    // Updated bright neon colors
     const COLORS = [
-        { name: 'Yellow', hex: '#FACC15' },
-        { name: 'Purple', hex: '#A855F7' },
-        { name: 'Red', hex: '#EF4444' },
-        { name: 'Green', hex: '#22C55E' },
-        { name: 'Blue', hex: '#3B82F6' }
+        { name: 'Yellow', hex: '#facc15' }, // Yellow-400
+        { name: 'Purple', hex: '#c084fc' }, // Purple-400
+        { name: 'Red', hex: '#f87171' },    // Red-400
+        { name: 'Green', hex: '#4ade80' },  // Green-400
+        { name: 'Blue', hex: '#60a5fa' }    // Blue-400
     ];
 
-    // --- 게임 상태 ---
     let playerCount = 3;
     let deck = [];
     let currentCards = [];
-    let selectedCardIds = [];
+    let selectedCardIds = []; 
+    let currentTurnInRound = 0; 
     let round = 1;
     let history = [];
     let viewingHistoryIndex = -1;
 
-    // --- 인원 선택 로직 (2~5인) ---
+    function getRequiredSelectionCount() {
+        return playerCount;
+    }
+
+    function getDrawCount() {
+        return playerCount + 1;
+    }
+
     function setPlayerCount(num) {
         playerCount = num;
         document.querySelectorAll('.player-btn').forEach(btn => {
             if (parseInt(btn.innerText) === num) {
-                btn.className = "player-btn w-14 h-14 sm:w-16 sm:h-16 rounded-full text-xl font-bold bg-blue-600 text-white scale-110 shadow-lg";
+                btn.className = "player-btn w-14 h-14 rounded-2xl text-xl font-bold bg-indigo-500 text-white scale-110 shadow-lg border border-indigo-400 shadow-indigo-500/50 transition-all";
             } else {
-                btn.className = "player-btn w-14 h-14 sm:w-16 sm:h-16 rounded-full text-xl font-bold bg-slate-200 text-slate-600 transition-all";
+                btn.className = "player-btn w-14 h-14 rounded-2xl text-xl font-bold bg-slate-700 text-slate-400 transition-all border border-slate-600 hover:bg-slate-600";
             }
         });
-        document.getElementById('round-info-text').innerText = `${num}인 플레이: 총 ${ROUND_LIMITS[num]}라운드 진행`;
+        const info = document.getElementById('round-info-text');
+        info.innerText = `${num}인 플레이 시작합니다.`;
     }
 
-    // --- 게임 초기화 로직 ---
-    function initGame() {
-        deck = [];
+    function createFullDeck() {
+        let tempDeck = [];
         let idCounter = 0;
-
         COLORS.forEach(color => {
             Object.keys(REGULAR_SHAPES).forEach(key => {
-                deck.push({
+                tempDeck.push({
                     id: idCounter++,
                     shape: REGULAR_SHAPES[key],
                     color: color.hex,
@@ -225,10 +302,9 @@
                 });
             });
         });
-
         Object.keys(RAINBOW_SHAPES).forEach(key => {
             for (let i = 0; i < 2; i++) {
-                deck.push({
+                tempDeck.push({
                     id: idCounter++,
                     shape: RAINBOW_SHAPES[key],
                     color: 'rainbow',
@@ -237,13 +313,35 @@
                 });
             }
         });
+        return tempDeck.sort(() => Math.random() - 0.5);
+    }
 
-        // 셔플
-        deck.sort(() => Math.random() - 0.5);
+    function drawCards() {
+        const targetCount = getDrawCount();
+        let nextCards = [];
 
-        // 첫 드로우: 인원수 + 1장
-        currentCards = deck.splice(0, playerCount + 1);
+        if (deck.length < targetCount) {
+            nextCards = [...deck];
+            deck = [];
+            let usedCards = [];
+            history.forEach(h => usedCards.push(...h.cards));
+            const currentIds = currentCards.map(c => c.id);
+            deck = usedCards.filter(c => !currentIds.includes(c.id)).sort(() => Math.random() - 0.5);
+            const needed = targetCount - nextCards.length;
+            nextCards.push(...deck.splice(0, needed));
+            showReshuffleToast();
+        } else {
+            nextCards = deck.splice(0, targetCount);
+        }
+        return nextCards;
+    }
+
+    function initGame() {
+        deck = createFullDeck();
+        currentCards = []; 
+        currentCards = drawCards();
         selectedCardIds = [];
+        currentTurnInRound = 0;
         round = 1;
         history = [];
         viewingHistoryIndex = -1;
@@ -251,20 +349,17 @@
         updateUI();
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
-        document.getElementById('ended-modal').classList.add('hidden');
     }
 
     function performReset() {
         document.getElementById('game-screen').classList.add('hidden');
         document.getElementById('setup-screen').classList.remove('hidden');
         document.getElementById('reset-modal').classList.add('hidden');
-        document.getElementById('ended-modal').classList.add('hidden');
     }
 
     function openResetModal() { document.getElementById('reset-modal').classList.remove('hidden'); }
     function closeResetModal() { document.getElementById('reset-modal').classList.add('hidden'); }
 
-    // --- 라운드 제어 ---
     function handleNextAction() {
         if (viewingHistoryIndex !== -1) {
             if (viewingHistoryIndex === history.length - 1) {
@@ -276,30 +371,32 @@
             return;
         }
 
-        if (selectedCardIds.length < playerCount) return;
+        if (selectedCardIds.length < getRequiredSelectionCount()) return;
 
         history.push({
             round: round,
+            turn: currentTurnInRound + 1,
             cards: [...currentCards],
-            selectedIds: [...selectedCardIds]
+            selectedIds: [...selectedCardIds],
+            reqCount: getRequiredSelectionCount()
         });
 
-        // 지정된 라운드 종료 확인
-        if (round >= ROUND_LIMITS[playerCount]) {
-            document.getElementById('ended-modal').classList.remove('hidden');
-            return;
+        currentTurnInRound++;
+
+        if (currentTurnInRound >= playerCount) {
+            round++;
+            currentTurnInRound = 0;
         }
 
-        // 덱 소진 확인 (안전장치)
-        if (deck.length < playerCount + 1) {
-            document.getElementById('ended-modal').classList.remove('hidden');
-            return;
-        }
-
-        currentCards = deck.splice(0, playerCount + 1);
+        currentCards = drawCards();
         selectedCardIds = [];
-        round++;
         updateUI();
+    }
+
+    function showReshuffleToast() {
+        const toast = document.getElementById('reshuffle-toast');
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
     }
 
     function showPreviousRound() {
@@ -311,17 +408,22 @@
         updateUI();
     }
 
-    // --- 카드 렌더링 ---
     function renderCard(card) {
+        const reqCount = viewingHistoryIndex === -1 ? getRequiredSelectionCount() : history[viewingHistoryIndex].reqCount;
         const isSelected = (viewingHistoryIndex === -1 ? selectedCardIds : history[viewingHistoryIndex].selectedIds).includes(card.id);
         const isHistoryView = viewingHistoryIndex !== -1;
-        const isRoundComplete = !isHistoryView && selectedCardIds.length === playerCount;
-        const isDimmed = !isSelected && (isHistoryView || isRoundComplete);
+        const isFull = !isHistoryView && selectedCardIds.length >= reqCount;
+        const isDimmed = !isSelected && (isHistoryView || isFull);
 
         const cardBtn = document.createElement('button');
-        cardBtn.className = `relative w-36 h-52 sm:w-40 sm:h-56 rounded-2xl border-2 transition-all duration-300 transform flex flex-col items-center justify-between py-8 bg-white ${isSelected ? 'card-selected' : 'border-slate-200'} ${isDimmed ? 'opacity-30 grayscale-[0.5] blur-[0.5px]' : 'opacity-100'}`;
+        // Updated card styles for dark theme
+        const baseClasses = `relative w-32 h-48 sm:w-36 sm:h-52 md:w-40 md:h-56 rounded-3xl transition-all duration-300 transform flex flex-col items-center justify-between py-6 sm:py-8 card-base`;
+        const selectedClasses = isSelected ? 'card-selected' : '';
+        const dimmedClasses = isDimmed ? 'opacity-30 blur-[1px] grayscale-[0.3]' : 'opacity-100';
         
-        if (!isHistoryView && (!isRoundComplete || isSelected)) {
+        cardBtn.className = `${baseClasses} ${selectedClasses} ${dimmedClasses}`;
+        
+        if (!isHistoryView) {
             cardBtn.onclick = () => toggleCard(card.id);
         }
 
@@ -329,7 +431,7 @@
         shapeContainer.className = "relative";
         const rows = card.shape.length;
         const cols = card.shape[0].length;
-        const size = 16;
+        const size = 14;
         const pad = 2;
         shapeContainer.style.width = `${cols * (size + pad)}px`;
         shapeContainer.style.height = `${rows * (size + pad)}px`;
@@ -355,13 +457,13 @@
         const footer = document.createElement('div');
         footer.className = "h-8 flex items-center justify-center";
         if (card.hasCoin) {
-            footer.innerHTML = `<div class="bg-yellow-100 p-1.5 rounded-full border border-yellow-200 shadow-sm"><i class="fa-solid fa-coins text-yellow-600"></i></div>`;
+            footer.innerHTML = `<div class="bg-yellow-500/20 p-1.5 rounded-full border border-yellow-400/50 shadow-[0_0_10px_rgba(250,204,21,0.3)]"><i class="fa-solid fa-coins text-yellow-400 text-sm"></i></div>`;
         }
         cardBtn.appendChild(footer);
 
         if (isSelected) {
             const check = document.createElement('div');
-            check.className = "absolute top-3 right-3 bg-blue-500 text-white rounded-full p-1 shadow-md w-6 h-6 flex items-center justify-center text-[10px]";
+            check.className = "absolute top-3 right-3 bg-indigo-500 text-white rounded-full p-1.5 shadow-lg w-7 h-7 flex items-center justify-center text-xs";
             check.innerHTML = `<i class="fa-solid fa-check"></i>`;
             cardBtn.appendChild(check);
         }
@@ -370,11 +472,15 @@
     }
 
     function toggleCard(id) {
+        const reqCount = getRequiredSelectionCount();
         const idx = selectedCardIds.indexOf(id);
+        
         if (idx > -1) {
             selectedCardIds.splice(idx, 1);
-        } else if (selectedCardIds.length < playerCount) {
-            selectedCardIds.push(id);
+        } else {
+            if (selectedCardIds.length < reqCount) {
+                selectedCardIds.push(id);
+            }
         }
         updateUI();
     }
@@ -382,21 +488,43 @@
     function updateUI() {
         const isHistory = viewingHistoryIndex !== -1;
         const dispRound = isHistory ? history[viewingHistoryIndex].round : round;
+        const dispTurn = isHistory ? history[viewingHistoryIndex].turn : currentTurnInRound + 1;
         const dispCards = isHistory ? history[viewingHistoryIndex].cards : currentCards;
         const dispSelCount = isHistory ? history[viewingHistoryIndex].selectedIds.length : selectedCardIds.length;
+        const reqCount = isHistory ? history[viewingHistoryIndex].reqCount : getRequiredSelectionCount();
 
         document.getElementById('current-round-display').innerText = dispRound;
-        document.getElementById('current-round-display').className = `text-3xl font-black ${isHistory ? 'text-orange-500' : 'text-slate-800'}`;
-        document.getElementById('round-label').innerText = isHistory ? `Viewing Round ${dispRound}` : 'Current Round';
-        document.getElementById('max-round-display').innerText = `/ ${ROUND_LIMITS[playerCount]}`;
+        document.getElementById('current-round-display').className = `text-4xl font-bold drop-shadow-sm ${isHistory ? 'text-amber-400' : 'text-white'}`;
+        document.getElementById('round-label').innerText = isHistory ? `기록 확인: Round ${dispRound}` : '현재 라운드';
         document.getElementById('deck-count').innerText = deck.length;
-        document.getElementById('selection-count').innerText = `${dispSelCount}/${playerCount}`;
+        document.getElementById('selection-count').innerText = `${dispSelCount}/${reqCount}`;
         
         const statusBox = document.getElementById('selection-status');
-        if (dispSelCount === playerCount) {
-            statusBox.className = "px-2 py-1.5 rounded-lg flex items-center gap-1.5 bg-green-100 text-green-700";
+        if (dispSelCount === reqCount) {
+            statusBox.className = "px-3 py-2 rounded-xl flex items-center gap-2 bg-green-500/20 border border-green-500/30 text-green-200 transition-colors";
         } else {
-            statusBox.className = "px-2 py-1.5 rounded-lg flex items-center gap-1.5 bg-blue-100 text-blue-700";
+            statusBox.className = "px-3 py-2 rounded-xl flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-200";
+        }
+
+        const dotsContainer = document.getElementById('turn-progress-dots');
+        dotsContainer.innerHTML = '';
+        for (let i = 0; i < playerCount; i++) {
+            const dot = document.createElement('div');
+            const turnIndex = isHistory ? dispTurn - 1 : currentTurnInRound;
+            const isActive = i < turnIndex;
+            const isCurrent = i === turnIndex;
+            // Updated dot colors for dark theme
+            dot.className = `h-2 rounded-full transition-all duration-300 ${isCurrent ? 'w-6 bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.6)]' : (isActive ? 'w-2 bg-indigo-800' : 'w-2 bg-slate-700')}`;
+            dotsContainer.appendChild(dot);
+        }
+
+        const instruction = document.getElementById('turn-instruction');
+        if (isHistory) {
+            instruction.innerText = `Player ${dispTurn} (기록 확인)`;
+            instruction.className = "text-center text-sm font-bold text-amber-400 uppercase tracking-wide";
+        } else {
+            instruction.innerText = `Player ${dispTurn}`;
+            instruction.className = "text-center text-sm font-bold text-indigo-200 uppercase tracking-wide";
         }
 
         document.getElementById('history-alert').style.display = isHistory ? 'flex' : 'none';
@@ -411,14 +539,15 @@
         prevBtn.disabled = (isHistory && viewingHistoryIndex === 0) || (!isHistory && history.length === 0);
 
         if (isHistory) {
-            nextBtn.innerText = viewingHistoryIndex === history.length - 1 ? 'BACK TO CURRENT' : 'NEXT HISTORY';
-            nextBtn.className = "flex-[2] py-4 bg-orange-500 text-white rounded-2xl text-xl font-black flex items-center justify-center gap-3 hover:bg-orange-600 shadow-lg transition-all";
+            nextBtn.innerText = viewingHistoryIndex === history.length - 1 ? 'BACK TO GAME' : 'NEXT HISTORY';
+            nextBtn.className = "flex-[2] py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-amber-900/20 transition-all";
             nextBtn.disabled = false;
         } else {
-            nextBtn.innerText = round === ROUND_LIMITS[playerCount] ? 'FINISH GAME' : 'NEXT ROUND';
-            const ready = selectedCardIds.length === playerCount;
+            const ready = selectedCardIds.length === reqCount;
+            nextBtn.innerText = 'CONFIRM';
             nextBtn.disabled = !ready;
-            nextBtn.className = `flex-[2] py-4 rounded-2xl text-xl font-black flex items-center justify-center gap-3 transition-all ${ready ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl' : 'bg-slate-100 text-slate-300'}`;
+            // Updated button styles
+            nextBtn.className = `flex-[2] py-4 rounded-2xl text-xl font-bold flex items-center justify-center gap-3 transition-all ${ready ? 'btn-primary text-white shadow-lg cursor-pointer' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`;
         }
     }
 </script>
