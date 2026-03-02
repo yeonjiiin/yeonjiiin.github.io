@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corinth Dice Helper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #fdf6e3; /* 빈티지한 종이 느낌 배경 */
+            color: #433422;
+            font-family: 'system-ui', -apple-system, sans-serif;
+        }
+        .dice {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .dice-white { background-color: #ffffff; color: #1a1a1a; border: 2px solid #d1d5db; }
+        .dice-yellow { background-color: #fbbf24; color: #78350f; border: 2px solid #d97706; }
+        .dice.used {
+            opacity: 0.2;
+            transform: scale(0.85);
+            filter: grayscale(1);
+        }
+        
+        .board-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            min-height: 90px;
+            margin-bottom: 6px;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 이미지 순서에 따른 색상 정의 */
+        .row-gold { background-color: #f7d794; } /* 1. 금화 (최상단 - 가장 높은 눈금) */
+        .row-spice { background-color: #f3a683; } /* 2. 향료 */
+        .row-cloth { background-color: #778beb; } /* 3. 비단 */
+        .row-wine { background-color: #cf8af7; } /* 4. 와인 */
+        .row-sheep { background-color: #78e08f; } /* 5. 양 */
+        .row-goat { background-color: #d1d8e0; }  /* 6. 염소 (최하단 - 가장 낮은 눈금) */
+
+        .row-label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #1a1a1a;
+            line-height: 1.2;
+            z-index: 10;
+        }
+        .row-label span {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 2px;
+        }
+
+        .pulse {
+            animation: pulse-animation 0.5s ease-out;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center min-h-screen">
+    <div class="max-w-2xl w-full">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-black text-amber-800 tracking-tighter italic">CORINTH</h1>
+            <p class="text-amber-700 text-sm font-semibold">Dice Placement Helper</p>
+        </header>
+
+        <!-- Dice Controller -->
+        <div class="bg-[#f3ead3] p-6 rounded-2xl shadow-xl border-2 border-[#d9cdb0] mb-6">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="text-center">
+                        <p class="text-[10px] font-bold text-amber-900 mb-1 uppercase">흰색 9개</p>
+                        <div class="dice dice-white cursor-default mx-auto">9</div>
+                    </div>
+                    <div class="text-xl font-bold text-amber-800">+</div>
+                    <div class="text-center">
+                        <p class="text-[10px] font-bold text-amber-900 mb-1 uppercase">노란색 (0-3)</p>
+                        <div class="flex items-center bg-white/50 rounded-xl p-1 gap-2 border border-amber-300">
+                            <button onclick="adjustYellow(-1)" class="w-8 h-8 flex items-center justify-center bg-amber-200 hover:bg-amber-300 rounded-lg font-bold text-amber-900">-</button>
+                            <span id="yellow-count" class="w-6 text-center font-black text-amber-800">0</span>
+                            <button onclick="adjustYellow(1)" class="w-8 h-8 flex items-center justify-center bg-amber-200 hover:bg-amber-300 rounded-lg font-bold text-amber-900">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="rollDice()" id="roll-btn" class="flex-1 sm:flex-none px-8 py-4 bg-amber-700 hover:bg-amber-800 text-white font-black rounded-xl shadow-lg transition-all active:scale-95 text-lg">
+                    ROLL DICE
+                </button>
+            </div>
+
+            <p class="text-[11px] text-amber-900/60 mb-2 text-center font-medium italic">* 흰색 주사위를 터치하면 행 전체가 선택됩니다.</p>
+
+            <!-- Dice Results Area -->
+            <div id="board-display" class="flex flex-col">
+                <div class="text-center py-20 text-amber-800/30 border-2 border-dashed border-amber-800/20 rounded-xl font-bold">
+                    주사위를 굴려주세요.
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-amber-900/40 text-[10px] font-bold tracking-widest uppercase">
+            Board Game Helper Prototype
+        </footer>
+    </div>
+
+    <script>
+        let yellowDiceCount = 0;
+        
+        const rowConfigs = [
+            { id: 'gold', label: "💰 금화", sub: "Gold", class: "row-gold" },
+            { id: 'spice', label: "🏺 향료", sub: "Spice", class: "row-spice" },
+            { id: 'cloth', label: "📜 비단", sub: "Cloth", class: "row-cloth" },
+            { id: 'wine', label: "🍷 와인", sub: "Wine", class: "row-wine" },
+            { id: 'sheep', label: "🐑 양", sub: "Sheep", class: "row-sheep" },
+            { id: 'goat', label: "🐐 염소", sub: "Goat", class: "row-goat" }
+        ];
+
+        function adjustYellow(val) {
+            yellowDiceCount = Math.max(0, Math.min(3, yellowDiceCount + val));
+            document.getElementById('yellow-count').innerText = yellowDiceCount;
+        }
+
+        function toggleRowWhiteDice(rowElement) {
+            // 해당 행 안에 있는 모든 'dice-white' 클래스를 가진 요소를 찾음
+            const whiteDice = rowElement.querySelectorAll('.dice-white');
+            if (whiteDice.length === 0) return;
+
+            // 첫 번째 주사위의 상태를 기준으로 반전시킴
+            const isAlreadyUsed = whiteDice[0].classList.contains('used');
+            whiteDice.forEach(d => {
+                if (isAlreadyUsed) {
+                    d.classList.remove('used');
+                } else {
+                    d.classList.add('used');
+                }
+            });
+        }
+
+        function rollDice() {
+            const btn = document.getElementById('roll-btn');
+            btn.classList.add('pulse');
+            setTimeout(() => btn.classList.remove('pulse'), 500);
+
+            const whiteDice = Array.from({ length: 9 }, () => ({ val: Math.floor(Math.random() * 6) + 1, type: 'white' }));
+            const yellowDice = Array.from({ length: yellowDiceCount }, () => ({ val: Math.floor(Math.random() * 6) + 1, type: 'yellow' }));
+            const allDice = [...whiteDice, ...yellowDice];
+            
+            const groups = {};
+            allDice.forEach(d => {
+                if (!groups[d.val]) groups[d.val] = [];
+                groups[d.val].push(d);
+            });
+
+            const sortedValues = Object.keys(groups).map(Number).sort((a, b) => a - b);
+            
+            const finalMapping = new Array(6).fill(null);
+            if (sortedValues.length > 0) {
+                const highestValue = sortedValues.pop();
+                finalMapping[0] = highestValue;
+
+                for (let i = 5; i >= 1; i--) {
+                    if (sortedValues.length > 0) {
+                        finalMapping[i] = sortedValues.shift();
+                    }
+                }
+            }
+            
+            const boardDisplay = document.getElementById('board-display');
+            boardDisplay.innerHTML = '';
+
+            rowConfigs.forEach((config, index) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = `board-row ${config.class}`;
+                
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'row-label';
+                labelDiv.innerHTML = `<span>${config.label}</span>${config.sub}`;
+                
+                const diceContainer = document.createElement('div');
+                diceContainer.className = 'flex gap-2 flex-wrap';
+
+                const targetValue = finalMapping[index];
+
+                if (targetValue && groups[targetValue]) {
+                    groups[targetValue].forEach(d => {
+                        const dDiv = document.createElement('div');
+                        dDiv.className = `dice ${d.type === 'white' ? 'dice-white' : 'dice-yellow'}`;
+                        dDiv.innerText = d.val;
+                        
+                        // 주사위 클릭 이벤트
+                        dDiv.onclick = (e) => {
+                            e.stopPropagation(); // 이벤트 버블링 방지
+                            if (d.type === 'white') {
+                                // 흰색 주사위면 행 전체 흰색 주사위 토글
+                                toggleRowWhiteDice(rowDiv);
+                            } else {
+                                // 노란색 주사위면 개별 토글
+                                dDiv.classList.toggle('used');
+                            }
+                        };
+                        diceContainer.appendChild(dDiv);
+                    });
+                } else {
+                    diceContainer.innerHTML = '<span class="text-black/10 font-black italic text-sm">-</span>';
+                }
+
+                rowDiv.appendChild(labelDiv);
+                rowDiv.appendChild(diceContainer);
+                boardDisplay.appendChild(rowDiv);
+            });
+        }
+    </script>
+</body>
+</html>
