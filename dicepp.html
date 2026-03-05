@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주사위 풀파티 (Dice Pool Party)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 주사위 눈금 렌더링을 위한 3x3 그리드 설정 */
+        .dice-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px;
+            padding: 8px;
+        }
+        
+        .pool-shadow {
+            box-shadow: inset 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 뚜껑 애니메이션 */
+        .lid-open {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .lid-closed {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 커스텀 스크롤바 (점수판용) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.2); 
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.6); 
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-sky-50 min-h-screen flex flex-col items-center justify-center p-4 font-sans text-gray-800">
+
+    <div class="max-w-2xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border-4 border-sky-200">
+        
+        <!-- Header -->
+        <div class="bg-sky-400 p-6 text-center text-white relative">
+            <h1 class="text-3xl font-extrabold tracking-tight mb-2">🎲 주사위 풀파티</h1>
+            <p class="text-sky-100 font-medium text-sm">
+                버튼을 누르면 12개의 주사위가 굴려집니다.<br>
+                <span class="text-yellow-300 font-bold">정확히 3초</span> 동안만 보여지니 눈을 크게 뜨고 기억하세요!
+            </p>
+        </div>
+
+        <!-- Game Area -->
+        <div class="p-6 relative">
+            
+            <!-- Progress Bar (Timer) -->
+            <div class="h-2 w-full bg-gray-200 rounded-full mb-6 overflow-hidden">
+                <div id="progress-bar" class="h-full bg-red-500 w-0 transition-none"></div>
+            </div>
+
+            <!-- The Pool -->
+            <div class="relative w-full h-80 bg-cyan-600 rounded-2xl pool-shadow flex items-center justify-center overflow-hidden border-4 border-cyan-800">
+                
+                <!-- Dice Container -->
+                <div id="dice-container" class="grid grid-cols-4 grid-rows-3 gap-3 w-full h-full p-4 place-items-center opacity-100 transition-opacity duration-300">
+                    <!-- 주사위들이 자바스크립트를 통해 생성됩니다 -->
+                </div>
+
+                <!-- Lid / Cover -->
+                <div id="pool-cover" class="absolute inset-0 bg-cyan-900 flex flex-col items-center justify-center text-white transition-all duration-500 ease-in-out lid-closed z-10">
+                    <svg class="w-16 h-16 text-cyan-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                    <span class="text-xl font-bold tracking-widest text-cyan-200 mb-6">주사위가 가려졌습니다</span>
+                    
+                    <!-- 결과 보기 버튼 -->
+                    <button id="view-result-btn" onclick="showResult()" class="hidden bg-white text-cyan-900 px-8 py-3 rounded-full font-extrabold shadow-xl hover:bg-gray-100 transition-transform active:scale-95 flex items-center gap-2 border-b-4 border-gray-300">
+                        <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        점수 확인하기
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Action Button -->
+            <div class="mt-8 flex justify-center">
+                <button id="roll-button" onclick="rollDice()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-4 px-12 rounded-full text-xl shadow-lg transform transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 border-b-4 border-yellow-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    주사위 한꺼번에 굴리기
+                </button>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-[#5abed4] rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col max-h-[90vh] border-4 border-white">
+            <div class="p-4 flex justify-between items-center text-white border-b border-white/30 bg-[#4ca6bc]">
+                <h2 class="font-extrabold text-xl flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    결과 점수판
+                </h2>
+                <button onclick="closeResult()" class="hover:bg-white/20 p-1 rounded-full transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-4 overflow-y-auto custom-scrollbar space-y-2 flex-grow" id="score-list">
+                <!-- Javascript로 표 내용이 렌더링 됩니다 -->
+            </div>
+            
+            <div class="p-4 bg-[#4ca6bc] text-center border-t border-white/30">
+                <button onclick="closeResult()" class="bg-white text-cyan-900 px-8 py-2 rounded-full font-bold shadow-md hover:bg-gray-100 transition-transform active:scale-95">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 주사위 종류 정의 (모달 컬러와 일치하도록 업데이트)
+        const DICE_TYPES = [
+            { id: 'pink', bg: 'bg-[#f9a8d4]', pip: 'bg-[#1e3a8a]', border: 'border-white' },
+            { id: 'pink', bg: 'bg-[#f9a8d4]', pip: 'bg-[#1e3a8a]', border: 'border-white' },
+            { id: 'yellow', bg: 'bg-[#fde047]', pip: 'bg-[#ea580c]', border: 'border-[#ea580c]' },
+            { id: 'yellow', bg: 'bg-[#fde047]', pip: 'bg-[#ea580c]', border: 'border-[#ea580c]' },
+            { id: 'purple', bg: 'bg-[#a855f7]', pip: 'bg-[#ffffff]', border: 'border-white' },
+            { id: 'purple', bg: 'bg-[#a855f7]', pip: 'bg-[#ffffff]', border: 'border-white' },
+            { id: 'green', bg: 'bg-[#4ade80]', pip: 'bg-[#ffffff]', border: 'border-white' }, // 점수판 아이콘에 맞춰 눈 색상 흰색으로 조정
+            { id: 'green', bg: 'bg-[#4ade80]', pip: 'bg-[#ffffff]', border: 'border-white' },
+            { id: 'white', bg: 'bg-[#ffffff]', pip: 'bg-[#ea580c]', border: 'border-[#ea580c]' },
+            { id: 'white', bg: 'bg-[#ffffff]', pip: 'bg-[#ea580c]', border: 'border-[#ea580c]' },
+            { id: 'navy', bg: 'bg-[#1e3a8a]', pip: 'bg-[#ffffff]', border: 'border-white' },
+            { id: 'navy', bg: 'bg-[#1e3a8a]', pip: 'bg-[#ffffff]', border: 'border-white' }
+        ];
+
+        const PIP_POSITIONS = {
+            1: [5],
+            2: [1, 9],
+            3: [1, 5, 9],
+            4: [1, 3, 7, 9],
+            5: [1, 3, 5, 7, 9],
+            6: [1, 4, 7, 3, 6, 9]
+        };
+
+        let isRolling = false;
+        let timerInterval;
+        let currentRoll = [];
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function createDieHTML(type, value) {
+            const pips = PIP_POSITIONS[value];
+            let gridHtml = '';
+            for (let i = 1; i <= 9; i++) {
+                if (pips.includes(i)) gridHtml += `<div class="w-full h-full rounded-full ${type.pip} shadow-sm"></div>`;
+                else gridHtml += `<div></div>`;
+            }
+            const randomRotation = Math.floor(Math.random() * 40) - 20; 
+            return `
+                <div class="flex items-center justify-center" style="transform: rotate(${randomRotation}deg);">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl shadow-[0_4px_6px_rgba(0,0,0,0.4)] dice-grid ${type.bg} border-2 ${type.border} transition-transform duration-200">
+                        ${gridHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function rollDice() {
+            if (isRolling) return;
+            isRolling = true;
+            
+            const btn = document.getElementById('roll-button');
+            const cover = document.getElementById('pool-cover');
+            const container = document.getElementById('dice-container');
+            const progressBar = document.getElementById('progress-bar');
+            const viewResultBtn = document.getElementById('view-result-btn');
+            
+            btn.disabled = true;
+            btn.innerText = '기억하세요!';
+            viewResultBtn.classList.add('hidden');
+
+            currentRoll = [];
+            const shuffledTypes = shuffleArray(DICE_TYPES);
+            let newDiceHtml = '';
+            
+            shuffledTypes.forEach(type => {
+                const randomValue = Math.floor(Math.random() * 6) + 1;
+                currentRoll.push({ type: type.id, value: randomValue });
+                newDiceHtml += createDieHTML(type, randomValue);
+            });
+
+            container.innerHTML = newDiceHtml;
+            cover.classList.remove('lid-closed');
+            cover.classList.add('lid-open');
+
+            let timeLeft = 3000;
+            const updateInterval = 20;
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('bg-red-500');
+            progressBar.classList.add('bg-green-500');
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft -= updateInterval;
+                const percentage = (timeLeft / 3000) * 100;
+                progressBar.style.width = `${percentage}%`;
+                if (percentage < 30) {
+                    progressBar.classList.remove('bg-green-500');
+                    progressBar.classList.add('bg-red-500');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    finishRoll();
+                }
+            }, updateInterval);
+        }
+
+        function finishRoll() {
+            const btn = document.getElementById('roll-button');
+            const cover = document.getElementById('pool-cover');
+            const progressBar = document.getElementById('progress-bar');
+            const viewResultBtn = document.getElementById('view-result-btn');
+            
+            cover.classList.remove('lid-open');
+            cover.classList.add('lid-closed');
+            progressBar.style.width = '0%';
+            
+            setTimeout(() => {
+                isRolling = false;
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> 다시 굴리기`;
+                viewResultBtn.classList.remove('hidden');
+            }, 500); 
+        }
+
+        function createMiniDie(value) {
+            const pips = PIP_POSITIONS[value];
+            let grid = '';
+            for(let i=1; i<=9; i++){
+                if(pips.includes(i)) grid += `<div class="w-[4px] h-[4px] bg-black rounded-full"></div>`;
+                else grid += `<div></div>`;
+            }
+            return `<div class="w-7 h-7 bg-white border border-gray-400 rounded grid grid-cols-3 grid-rows-3 gap-[1px] p-[3px] place-items-center shadow-sm">${grid}</div>`;
+        }
+
+        function calculateScores() {
+            const scores = {};
+            const colorOrder = ['pink', 'yellow', 'purple', 'green', 'white', 'navy'];
+            colorOrder.forEach(color => {
+                scores[color] = currentRoll.filter(d => d.type === color).reduce((sum, d) => sum + d.value, 0);
+            });
+            let pairsScore = 0;
+            colorOrder.forEach(color => {
+                const diceOfColor = currentRoll.filter(d => d.type === color);
+                if (diceOfColor.length === 2 && diceOfColor[0].value === diceOfColor[1].value) pairsScore += 10;
+            });
+            scores['pairs'] = pairsScore;
+            scores['sum123'] = currentRoll.filter(d => d.value <= 3).reduce((sum, d) => sum + d.value, 0);
+            scores['sum4'] = currentRoll.filter(d => d.value === 4).reduce((sum, d) => sum + d.value, 0);
+            scores['sum5'] = currentRoll.filter(d => d.value === 5).reduce((sum, d) => sum + d.value, 0);
+            scores['sum6'] = currentRoll.filter(d => d.value === 6).reduce((sum, d) => sum + d.value, 0);
+            scores['total'] = currentRoll.reduce((sum, d) => sum + d.value, 0);
+            return scores;
+        }
+
+        function renderScoreBoard() {
+            const scores = calculateScores();
+            const listContainer = document.getElementById('score-list');
+            const items = [
+                { icon: `<div class="w-10 h-10 rounded-lg bg-[#f9a8d4] shadow border-2 border-white"></div>`, val: scores['pink'] },
+                { icon: `<div class="w-10 h-10 rounded-lg bg-[#fde047] shadow border-2 border-[#ea580c]"></div>`, val: scores['yellow'] },
+                { icon: `<div class="w-10 h-10 rounded-lg bg-[#a855f7] shadow border-2 border-white"></div>`, val: scores['purple'] },
+                { icon: `<div class="w-10 h-10 rounded-lg bg-[#4ade80] shadow border-2 border-white"></div>`, val: scores['green'] },
+                { icon: `<div class="w-10 h-10 rounded-lg bg-white shadow border-2 border-[#ea580c]"></div>`, val: scores['white'] },
+                { icon: `<div class="w-10 h-10 rounded-lg bg-[#1e3a8a] shadow border-2 border-white"></div>`, val: scores['navy'] },
+                { icon: `<div class="flex items-center gap-1 font-black text-white text-sm">
+                            <div class="flex relative w-10 h-8 items-center justify-center">
+                                <div class="absolute left-0 w-6 h-6 bg-gradient-to-br from-pink-400 via-yellow-400 to-cyan-400 rounded border-2 border-white shadow"></div>
+                                <div class="absolute right-0 w-6 h-6 bg-gradient-to-br from-cyan-400 via-yellow-400 to-pink-400 rounded border-2 border-white z-10 shadow"></div>
+                            </div>
+                            <span>=10</span>
+                         </div>`, val: scores['pairs'] },
+                { icon: `<div class="relative w-12 h-12 flex items-center justify-center">
+                            <div class="absolute transform -rotate-12 -translate-x-3 -translate-y-2">${createMiniDie(1)}</div>
+                            <div class="absolute transform rotate-12 translate-x-2 translate-y-1 z-10">${createMiniDie(2)}</div>
+                            <div class="absolute transform rotate-6 translate-x-0 -translate-y-3 z-20">${createMiniDie(3)}</div>
+                         </div>`, val: scores['sum123'] },
+                { icon: `<div class="scale-125">${createMiniDie(4)}</div>`, val: scores['sum4'] },
+                { icon: `<div class="scale-125">${createMiniDie(5)}</div>`, val: scores['sum5'] },
+                { icon: `<div class="scale-125">${createMiniDie(6)}</div>`, val: scores['sum6'] },
+                { icon: `<div class="w-10 h-10 rounded bg-white shadow border-2 border-gray-300 grid grid-cols-2 grid-rows-2 p-[2px] gap-[2px] overflow-hidden">
+                            <div class="bg-pink-300 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                            <div class="bg-yellow-300 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                            <div class="bg-green-300 rounded-sm flex space-x-[1px] items-center justify-center"><div class="w-1 h-1 bg-black rounded-full"></div><div class="w-1 h-1 bg-black rounded-full"></div></div>
+                            <div class="bg-blue-300 rounded-sm flex items-center justify-center"><div class="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                         </div>`, val: scores['total'] }
+            ];
+            let html = '';
+            items.forEach(item => {
+                html += `
+                <div class="flex items-center justify-between bg-[#c2ebf3] p-2 px-5 rounded-2xl shadow-sm mb-2 border border-white/50">
+                    <div class="flex items-center justify-center w-20 h-12">${item.icon}</div>
+                    <div class="bg-white min-w-[4rem] px-4 h-10 rounded-full flex items-center justify-center font-black text-2xl text-cyan-900 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
+                        ${item.val}
+                    </div>
+                </div>`;
+            });
+            listContainer.innerHTML = html;
+        }
+
+        function showResult() {
+            renderScoreBoard();
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        function closeResult() {
+            document.getElementById('result-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
