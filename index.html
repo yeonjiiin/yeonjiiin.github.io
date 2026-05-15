@@ -4,50 +4,82 @@
     <meta charset="UTF-8">
     <title>My Board Game Helpers</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background-color: #f4f4f4; }
-        .container { display: flex; justify-content: center; gap: 20px; margin-top: 50px; }
-        .game-card { 
-            padding: 20px; border: 2px solid #333; border-radius: 10px; 
-            background: white; text-decoration: none; color: black;
-            width: 200px; transition: transform 0.2s;
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            text-align: center; 
+            background-color: #f4f7f6; 
+            margin: 0;
+            padding: 40px 20px;
         }
-        .game-card:hover { transform: scale(1.05); background-color: #eee; }
+        h1 { color: #333; margin-bottom: 40px; }
+        
+        .container { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            flex-wrap: wrap; /* 카드가 많으면 다음 줄로 넘어가게 설정 */
+            max-width: 1000px; /* 화면이 너무 넓어지지 않게 고정 */
+            margin: 0 auto; 
+        }
+
+        .game-card { 
+            padding: 20px; 
+            border: none;
+            border-radius: 15px; 
+            background: white; 
+            text-decoration: none; 
+            color: #333;
+            width: 200px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .game-card:hover { 
+            transform: translateY(-10px); 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            background-color: #fff;
+            color: #007bff;
+        }
+
+        .game-card h2 { margin: 10px 0; font-size: 1.25rem; }
+        .game-card p { font-size: 0.9rem; color: #666; }
     </style>
 </head>
 <body>
-    <h1>보드게임 헬퍼 콜렉션</h1>
+    <h1>🎲 보드게임 헬퍼 콜렉션</h1>
+    
     <div class="container">
         <a href="corinth/index.html" class="game-card">
             <h2>코린트</h2>
-            <p>게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
         <a href="texas/index.html" class="game-card">
             <h2>텍사스 빙고</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
         <a href="ganz/index.html" class="game-card">
             <h2>영리한 여우</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
         <a href="nsl/index.html" class="game-card">
             <h2>넥스트 스테이션</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
         <a href="dicepp/index.html" class="game-card">
             <h2>다이스 풀 파티</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
-        <a href="locus/index.htmll" class="game-card">
+        <a href="locus/index.html" class="game-card">
             <h2>로커스</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
         <a href="underwater/index.html" class="game-card">
             <h2>언더워터 항해기</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
-        <a href="railroad/index.htmll" class="game-card">
+        <a href="railroad/index.html" class="game-card">
             <h2>레일로드 잉크</h2>
-            <p>카드 게임 구현 화면으로 이동</p>
+            <p>보드게임 헬퍼 실행</p>
         </a>
     </div>
 </body>
