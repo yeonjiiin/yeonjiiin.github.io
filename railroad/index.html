@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railroad Ink: Red Station Top Layer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --road-color: #475569;
+            --rail-color: #1e293b;
+            --river-main-color: #1e293b; 
+            --river-bg-color: #0ea5e9;   
+            --lake-bg-color: #bae6fd;
+            --station-color: #ef4444; /* 역 색상: 밝은 빨간색 */
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            background-attachment: fixed;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .dice-card {
+            border-radius: 14px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.05);
+        }
+
+        .dice-card:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        .white-dice { background: #ffffff; border-bottom: 4px solid #e2e8f0; }
+        .blue-dice { background: var(--river-bg-color); border-bottom: 4px solid #0284c7; }
+        .gray-dice { background: #e2e8f0; border-bottom: 4px solid #cbd5e1; }
+
+        .path-svg { width: 100%; height: 100%; border-radius: 10px; }
+
+        /* Path Styles */
+        .std-road-outline { stroke: var(--road-color); stroke-width: 12; fill: none; stroke-linecap: round; }
+        .std-road-inner { stroke: white; stroke-width: 2; fill: none; stroke-dasharray: 4 3; opacity: 0.9; }
+        .std-rail-main { stroke: var(--rail-color); stroke-width: 8; fill: none; stroke-dasharray: 4 2; }
+        .std-rail-side { stroke: var(--rail-color); stroke-width: 1.5; fill: none; opacity: 0.7; }
+        .std-station-box { fill: var(--station-color); stroke: white; stroke-width: 1; }
+        
+        /* River Styles: Black Wavy Line */
+        .river-line { stroke: var(--river-main-color); stroke-width: 10; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .river-bg-fill { fill: rgba(0, 0, 0, 0.05); stroke: none; }
+
+        /* Lake Styles */
+        .lake-fill-area { fill: url(#lakeGrid); stroke: #0369a1; stroke-width: 2; stroke-linejoin: round; }
+        .lake-wave { stroke: #0369a1; stroke-width: 1.5; fill: none; stroke-linecap: round; opacity: 0.6; }
+
+        @keyframes rollIn {
+            from { transform: scale(0.5) rotate(-20deg); opacity: 0; }
+            to { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        .rolling { animation: rollIn 0.3s ease-out forwards; }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <pattern id="lakeGrid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                <rect width="10" height="10" fill="#bae6fd" />
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#7dd3fc" stroke-width="0.5"/>
+                <path d="M 2 5 Q 4 3 6 5 T 10 5" fill="none" stroke="#0ea5e9" stroke-width="0.5" opacity="0.4"/>
+            </pattern>
+        </defs>
+    </svg>
+
+    <div class="max-w-4xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <div>
+                <h1 class="text-4xl font-black text-white italic tracking-tighter">RAILROAD INK</h1>
+                <p class="text-sky-400 text-xs font-bold uppercase tracking-[0.3em]">River Expansion: Black Wavy Path</p>
+            </div>
+            
+            <div class="flex gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                <div class="text-center px-6">
+                    <span class="block text-[10px] text-slate-400 font-bold uppercase">Current Round</span>
+                    <span id="round-val" class="text-2xl font-black">1</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-wrap gap-4 mb-8">
+            <label class="flex items-center gap-3 p-3 px-5 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+                <input type="checkbox" id="use-river" class="w-5 h-5 accent-blue-500" onchange="updateDiceSet()" checked>
+                <span class="font-bold text-sm">하천 (River)</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 px-5 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+                <input type="checkbox" id="use-lake" class="w-5 h-5 accent-sky-400" onchange="updateDiceSet()" checked>
+                <span class="font-bold text-sm">호수 (Lake)</span>
+            </label>
+        </div>
+
+        <div id="dice-container" class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12"></div>
+
+        <div class="flex flex-col sm:flex-row gap-4">
+            <button onclick="nextRound()" class="flex-grow bg-white hover:bg-sky-50 text-slate-900 font-black py-5 rounded-xl shadow-xl transition-all active:scale-95 text-lg">
+                NEXT ROUND / ROLL
+            </button>
+            <button onclick="resetGame()" class="px-8 py-5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold border border-white/10 transition-all">
+                RESET GAME
+            </button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Action</div>
+
+    <script>
+        // Drawing Helpers
+        const road = (d) => `<path d="${d}" class="std-road-outline"/><path d="${d}" class="std-road-inner"/>`;
+        const rail = (d) => `<path d="${d}" class="std-rail-side"/><path d="${d}" class="std-rail-main"/>`;
+        const station = (x, y) => `<rect x="${x-8}" y="${y-8}" width="16" height="16" class="std-station-box" rx="1"/>`;
+        const river = (d) => `<path d="${d}" class="river-line"/>`;
+        const lake = (d) => `<path d="${d}" class="lake-fill-area"/>`;
+        const waves = (paths) => paths.map(p => `<path d="${p}" class="lake-wave"/>`).join('');
+
+        const DICE_DATA = {
+            standard: [
+                { id: 'w1', draw: () => road("M 50 0 L 50 100") },
+                { id: 'w2', draw: () => road("M 50 100 Q 50 50 100 50") },
+                { id: 'w3', draw: () => road("M 0 50 L 100 50 M 50 50 L 50 100") },
+                { id: 'w4', draw: () => rail("M 50 0 L 50 100") },
+                { id: 'w5', draw: () => rail("M 50 100 Q 50 50 100 50") },
+                { id: 'w6', draw: () => rail("M 0 50 L 100 50 M 50 50 L 50 100") }
+            ],
+            mixed: [
+                { id: 'm1', draw: () => road("M 50 0 L 50 40") + rail("M 50 60 L 50 100") + station(50, 50) },
+                { id: 'm2', draw: () => road("M 100 50 L 60 50") + rail("M 50 100 L 50 60") + station(50, 50) },
+                { id: 'm3', draw: () => road("M 0 50 L 100 50") + rail("M 50 0 L 50 100") }
+            ],
+            river: [
+                { id: 'r1', draw: () => river("M 50 100 C 50 70 70 50 100 50") },
+                { id: 'r2', draw: () => river("M 50 100 C 50 70 70 50 100 50") },
+                { id: 'r3', draw: () => river("M 50 100 C 50 70 70 50 100 50") },
+                { id: 'r4', draw: () => river("M 50 0 C 40 25 60 45 50 55 C 40 75 60 90 50 100") },
+                { id: 'r5', draw: () => river("M 50 0 C 40 25 60 45 50 55 C 40 75 60 90 50 100") + rail("M 0 50 L 100 50") },
+                { id: 'r6', draw: () => river("M 50 0 C 60 25 40 45 50 55 C 60 75 40 90 50 100") + road("M 0 50 L 100 50") }
+            ],
+            lake: [
+                { id: 'l1', draw: () => lake("M 0 0 L 100 100 L 100 0 Z") + waves(["M 60 20 Q 70 15 80 20"]) },
+                { id: 'l2', draw: () => lake("M 0 0 L 100 0 L 100 35 Q 50 55 0 35 Z") + waves(["M 35 15 Q 50 10 65 15"]) },
+                { id: 'l3', draw: () => lake("M 0 0 L 100 0 L 100 100 L 0 100 Q 40 50 0 0 Z") + waves(["M 60 30 Q 75 25 85 30", "M 60 70 Q 75 65 85 70"]) },
+                // 레이어 순서 조정: 호수/도로를 먼저 그리고 역(station)을 마지막에 그림
+                { id: 'l4', draw: () => lake("M 0 0 L 100 0 L 100 35 Q 50 55 0 35 Z") + road("M 50 100 L 50 45") + station(50, 45) },
+                { id: 'l5', draw: () => lake("M 0 0 L 100 0 L 100 35 Q 50 55 0 35 Z") + rail("M 50 100 L 50 45") + station(50, 45) },
+                { id: 'l6', draw: () => lake("M 0 0 L 100 100 L 100 0 Z") + road("M 0 35 L 57 35") + rail("M 65 100 L 65 43") + station(65, 35) }
+            ]
+        };
+
+        let currentRound = 1;
+        let diceList = [];
+
+        function updateDiceSet() {
+            roll();
+        }
+
+        function roll() {
+            const useRiver = document.getElementById('use-river').checked;
+            const useLake = document.getElementById('use-lake').checked;
+            diceList = [];
+
+            for(let i=0; i<3; i++) diceList.push({...DICE_DATA.standard[Math.floor(Math.random()*6)], type: 'white'});
+            diceList.push({...DICE_DATA.mixed[Math.floor(Math.random()*3)], type: 'white'});
+
+            if(useRiver) {
+                for(let i=0; i<2; i++) {
+                    diceList.push({...DICE_DATA.river[Math.floor(Math.random()*6)], type: 'blue'});
+                }
+            }
+
+            if(useLake) {
+                for(let i=0; i<2; i++) {
+                    diceList.push({...DICE_DATA.lake[Math.floor(Math.random()*6)], type: 'gray'});
+                }
+            }
+
+            diceList = diceList.map(d => ({...d, rot: 0, flip: false}));
+            render();
+        }
+
+        function render() {
+            const container = document.getElementById('dice-container');
+            container.innerHTML = '';
+            
+            diceList.forEach((dice, idx) => {
+                const card = document.createElement('div');
+                card.className = `dice-card rolling ${dice.type}-dice`;
+                card.style.animationDelay = `${idx * 0.05}s`;
+                
+                card.onclick = () => {
+                    dice.rot = (dice.rot + 90) % 360;
+                    applyTransform(card, dice);
+                    showToast('90° 회전');
+                };
+                card.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    dice.flip = !dice.flip;
+                    applyTransform(card, dice);
+                    showToast('좌우 반전');
+                };
+
+                const inner = document.createElement('div');
+                inner.className = 'w-full h-full transition-all duration-300 pointer-events-none';
+                inner.innerHTML = `<svg viewBox="0 0 100 100" class="path-svg">${dice.draw()}</svg>`;
+                
+                card.appendChild(inner);
+                applyTransform(card, dice);
+                container.appendChild(card);
+            });
+        }
+
+        function applyTransform(card, dice) {
+            const inner = card.firstChild;
+            inner.style.transform = `rotate(${dice.rot}deg) scaleX(${dice.flip ? -1 : 1})`;
+        }
+
+        function nextRound() {
+            currentRound++;
+            document.getElementById('round-val').innerText = currentRound;
+            roll();
+        }
+
+        function resetGame() {
+            currentRound = 1;
+            document.getElementById('round-val').innerText = '1';
+            roll();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 800);
+        }
+
+        window.onload = roll;
+    </script>
+</body>
+</html>

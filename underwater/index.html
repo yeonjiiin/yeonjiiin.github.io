@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>언더워터 항해기 - 심해 낚시 헬퍼</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .ocean-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(2, 6, 23, 0.8) 100%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .dice {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 20px rgba(255,255,255,0.4);
+            transition: all 0.1s ease;
+        }
+
+        .progress-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .progress-dot.active {
+            background-color: #3b82f6;
+            box-shadow: 0 0 15px #3b82f6;
+            transform: scale(1.3);
+        }
+
+        .progress-dot.completed {
+            background-color: #0ea5e9;
+            opacity: 0.5;
+        }
+
+        .card-display {
+            perspective: 1200px;
+            width: 100%;
+            max-width: 300px;
+            height: 200px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-back {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            color: #3b82f6;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .card-front { transform: rotateY(180deg); }
+        .card-yellow { background: linear-gradient(135deg, #713f12, #a16207); color: #fef9c3; }
+        .card-red { background: linear-gradient(135deg, #7f1d1d, #991b1b); color: #fee2e2; }
+        .card-green { background: linear-gradient(135deg, #14532d, #166534); color: #dcfce7; }
+        .card-blue { background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #dbeafe; }
+
+        .score-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 36px;
+            height: 36px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.9rem;
+        }
+
+        .skip-btn {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #94a3b8;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .skip-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            color: #93c5fd;
+        }
+
+        .history-item { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-6 flex items-center justify-center">
+    <div class="ocean-bg"></div>
+
+    <div class="max-w-md w-full space-y-6">
+        <header class="text-center space-y-1 relative">
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-300 to-blue-600 tracking-tighter italic uppercase">Underwater Voyage</h1>
+            <p class="text-blue-400/60 text-[10px] font-bold uppercase tracking-[0.3em]">심해 낚시 헬퍼 시스템</p>
+        </header>
+
+        <!-- Dice Section -->
+        <section id="diceSection" class="glass-panel rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden">
+            <div class="flex justify-between items-center">
+                <span class="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Stage 1: Bait Casting</span>
+                <button id="skipBtn" class="skip-btn px-3 py-1 rounded-full text-[10px] font-bold">건너뛰기 ➔</button>
+            </div>
+
+            <div class="flex flex-col items-center gap-6">
+                <div id="diceMain" class="dice">?</div>
+                <div id="progressContainer" class="flex flex-wrap justify-center gap-2"></div>
+            </div>
+
+            <button id="rollBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] active:scale-[0.98]">
+                주사위 굴리기 (<span id="countDisplay">0</span>/16)
+            </button>
+        </section>
+
+        <!-- Card Section -->
+        <section id="cardSection" class="hidden glass-panel rounded-[2.5rem] p-8 space-y-6">
+            <div class="flex justify-between items-center">
+                <span class="text-[10px] font-bold text-emerald-400/70 uppercase tracking-widest">Stage 2: Deep Sea Discovery</span>
+            </div>
+            
+            <div class="flex flex-col items-center">
+                <div class="card-display">
+                    <div id="cardInner" class="card-inner cursor-pointer">
+                        <div class="card-face card-back">
+                            <div class="text-[10px] opacity-40 mb-2">UNKNOWN DEPTH</div>
+                            <div class="text-lg">심해 카드</div>
+                        </div>
+                        <div id="cardFront" class="card-face card-front">
+                            <div id="cardScore" class="score-badge"></div>
+                            <div id="cardIcon" class="text-2xl font-black mb-1"></div>
+                            <div id="cardDesc" class="text-xs font-bold text-center"></div>
+                            <div id="cardNote" class="mt-3 text-[9px] bg-black/30 p-2 rounded-lg leading-snug hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="drawBtn" class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-[0.98]">
+                카드 뽑기 (<span id="cardCount">16</span>/16)
+            </button>
+        </section>
+
+        <!-- Records -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="glass-panel rounded-3xl p-4 space-y-3">
+                <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Casting History</h3>
+                <div id="historyList" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar"></div>
+            </div>
+            <div class="glass-panel rounded-3xl p-4 space-y-3">
+                <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Discovery Logs</h3>
+                <div id="cardHistoryList" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar text-[10px] text-slate-500 italic"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MAX_ROLLS = 16;
+        let currentRoll = 0;
+        let diceHistory = [];
+        let cardHistory = [];
+        let shuffledDeck = [];
+        let cardsDrawn = 0;
+        let diceInterval = null;
+
+        const cardDeck = [
+            { type: 'yellow', icon: '[a b] 최소', desc: '가장 작은 수', score: '3' },
+            { type: 'yellow', icon: '[a+b] 최소', desc: '합이 최소', score: '3' },
+            { type: 'yellow', icon: '[1]', desc: '1 포함', score: '2' },
+            { type: 'red', icon: '[a b] 최대', desc: '가장 큰 수', score: '3' },
+            { type: 'red', icon: '[a+b] 최대', desc: '합이 최대', score: '3' },
+            { type: 'red', icon: '[9]', desc: '9 포함', score: '2' },
+            { type: 'green', icon: '[a-b] 최소', desc: '차이가 최소', score: '3' },
+            { type: 'green', icon: '[a-b] 최대', desc: '차이가 최대', score: '3' },
+            { type: 'green', icon: '50 ↔', desc: '50에 근접', score: '2' },
+            { type: 'green', icon: '[a/b]', desc: '첫 번째가 두 번째의 배수', score: '2' },
+            { type: 'green', icon: '[a+b]=10', desc: '합이 10', score: 'X', note: 'X는 이 심해 카드에 도전한 사람 수입니다.' },
+            { type: 'blue', icon: '[a=b]', desc: '같은 숫자 2개', score: '4' },
+            { type: 'blue', icon: '[a b]/10', desc: '10의 배수', score: '3' },
+            { type: 'blue', icon: '[0]', desc: '0 포함', score: '3' },
+            { type: 'blue', icon: '[a b]/5', desc: '5의 배수', score: '2' },
+            { type: 'blue', icon: '[5]', desc: '5 포함', score: 'X', note: 'X는 이 심해 카드에 도전한 사람 수입니다.' }
+        ];
+
+        // Elements
+        const diceEl = document.getElementById('diceMain');
+        const rollBtn = document.getElementById('rollBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const countDisplay = document.getElementById('countDisplay');
+        const progressContainer = document.getElementById('progressContainer');
+        const historyList = document.getElementById('historyList');
+        const cardHistoryList = document.getElementById('cardHistoryList');
+        const diceSection = document.getElementById('diceSection');
+        const cardSection = document.getElementById('cardSection');
+        const drawBtn = document.getElementById('drawBtn');
+        const cardInner = document.getElementById('cardInner');
+        const cardFront = document.getElementById('cardFront');
+        const cardScore = document.getElementById('cardScore');
+        const cardIcon = document.getElementById('cardIcon');
+        const cardDesc = document.getElementById('cardDesc');
+        const cardNote = document.getElementById('cardNote');
+        const cardCountDisplay = document.getElementById('cardCount');
+
+        function renderHistory() {
+            historyList.innerHTML = diceHistory.map(item => `
+                <div class="history-item bg-white/5 p-2 rounded-xl flex justify-between items-center border border-white/5 text-[10px]">
+                    <span class="text-slate-500 font-bold">#${item.turn}</span>
+                    <span class="text-sm font-black text-blue-400">${item.val}</span>
+                </div>
+            `).join('') || '<div class="text-[10px] text-slate-600 italic">로그 없음</div>';
+        }
+
+        function renderCardHistory() {
+            cardHistoryList.innerHTML = cardHistory.map(item => `
+                <div class="history-item bg-white/5 p-2 rounded-xl border-l-2 border-${item.type === 'yellow' ? 'yellow-500' : item.type === 'red' ? 'red-500' : item.type === 'green' ? 'green-500' : 'blue-500'} flex flex-col gap-1">
+                    <div class="flex justify-between font-bold">
+                        <span class="text-[8px] opacity-60">${item.score}점</span>
+                        <span class="text-white">${item.icon}</span>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-[10px] text-slate-600 italic">발견 없음</div>';
+        }
+
+        function initProgress() {
+            progressContainer.innerHTML = '';
+            for (let i = 0; i < MAX_ROLLS; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'progress-dot';
+                dot.id = `dot-${i}`;
+                progressContainer.appendChild(dot);
+            }
+        }
+
+        function updateProgress() {
+            for (let i = 0; i < MAX_ROLLS; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (!dot) continue;
+                dot.className = 'progress-dot';
+                if (i < currentRoll) dot.classList.add('completed');
+                if (i === currentRoll) dot.classList.add('active');
+            }
+        }
+
+        function goToCardPhase() {
+            if (diceInterval) { clearInterval(diceInterval); diceInterval = null; }
+            diceSection.classList.add('hidden');
+            cardSection.classList.remove('hidden');
+            cardInner.classList.remove('flipped');
+            cardsDrawn = 0;
+            cardCountDisplay.textContent = "16";
+            drawBtn.innerHTML = `카드 뽑기 (16/16)`;
+            drawBtn.disabled = false;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function rollDice() {
+            if (currentRoll >= MAX_ROLLS || diceInterval) return;
+            rollBtn.disabled = true;
+            
+            let it = 0;
+            const rollDuration = 6; 
+            const speed = 40; 
+            
+            diceInterval = setInterval(() => {
+                diceEl.textContent = Math.floor(Math.random() * 10);
+                diceEl.style.transform = `scale(${1.1 + Math.random() * 0.2}) rotate(${Math.random() * 40 - 20}deg)`;
+                it++;
+                
+                if (it > rollDuration) {
+                    clearInterval(diceInterval);
+                    diceInterval = null;
+                    const val = Math.floor(Math.random() * 10);
+                    diceEl.textContent = val;
+                    diceEl.style.transform = 'none';
+                    
+                    currentRoll++;
+                    countDisplay.textContent = currentRoll;
+                    rollBtn.innerHTML = `주사위 굴리기 (${currentRoll}/16)`;
+                    
+                    diceHistory.unshift({ turn: currentRoll, val: val });
+                    renderHistory();
+                    updateProgress();
+                    
+                    if (currentRoll < MAX_ROLLS) {
+                        rollBtn.disabled = false;
+                    } else {
+                        setTimeout(goToCardPhase, 600);
+                    }
+                }
+            }, speed);
+        }
+
+        function drawCard() {
+            if (cardsDrawn >= 16) {
+                init();
+                return;
+            }
+
+            if (cardInner.classList.contains('flipped')) {
+                cardInner.classList.remove('flipped');
+                setTimeout(() => { updateCardContent(); }, 200);
+            } else {
+                updateCardContent();
+            }
+        }
+
+        function updateCardContent() {
+            const card = shuffledDeck[cardsDrawn];
+            cardFront.className = `card-face card-front card-${card.type}`;
+            cardScore.textContent = card.score;
+            cardIcon.textContent = card.icon;
+            cardDesc.textContent = card.desc;
+            
+            if (card.note) {
+                cardNote.textContent = card.note;
+                cardNote.classList.remove('hidden');
+            } else {
+                cardNote.classList.add('hidden');
+            }
+            
+            cardInner.classList.add('flipped');
+            cardHistory.unshift({...card});
+            renderCardHistory();
+            
+            cardsDrawn++;
+            cardCountDisplay.textContent = 16 - cardsDrawn;
+            
+            if (cardsDrawn === 16) {
+                drawBtn.innerHTML = "모든 카드 확인 (다시 시작 ➔)";
+                drawBtn.classList.replace('from-emerald-600', 'from-blue-600');
+                drawBtn.classList.replace('to-emerald-500', 'to-blue-500');
+            } else {
+                drawBtn.innerHTML = `다음 카드 뽑기 (${16 - cardsDrawn}/16)`;
+            }
+        }
+
+        function init() {
+            if (diceInterval) {
+                clearInterval(diceInterval);
+                diceInterval = null;
+            }
+            
+            currentRoll = 0;
+            diceHistory = [];
+            cardHistory = [];
+            cardsDrawn = 0;
+            
+            diceSection.classList.remove('hidden');
+            cardSection.classList.add('hidden');
+            
+            diceEl.textContent = "?";
+            diceEl.style.transform = 'none';
+            countDisplay.textContent = "0";
+            rollBtn.disabled = false;
+            rollBtn.innerHTML = "주사위 굴리기 (0/16)";
+            
+            initProgress();
+            updateProgress();
+            
+            shuffledDeck = [...cardDeck].sort(() => Math.random() - 0.5);
+            cardInner.classList.remove('flipped');
+            cardCountDisplay.textContent = "16";
+            
+            drawBtn.disabled = false;
+            drawBtn.innerHTML = "카드 뽑기 (16/16)";
+            drawBtn.className = "w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-[0.98]";
+            
+            renderHistory();
+            renderCardHistory();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Event Bindings
+        rollBtn.addEventListener('click', rollDice);
+        skipBtn.addEventListener('click', goToCardPhase);
+        drawBtn.addEventListener('click', drawCard);
+        cardInner.addEventListener('click', drawCard);
+
+        window.onload = init;
+    </script>
+</body>
+</html>
