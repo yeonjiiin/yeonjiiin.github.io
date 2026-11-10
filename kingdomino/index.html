@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>킹도미노 듀얼 헬퍼 (Kingdomino Duel Companion)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Medieval & Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 60%, #090d16 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+
+        /* Medieval Parchment Texture */
+        .parchment-bg {
+            background: #fdf6e2 linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(243,229,190,0.8) 100%);
+            color: #292524;
+            box-shadow: inset 0 0 20px rgba(180, 130, 60, 0.25);
+        }
+        .parchment-dark {
+            background: #261d17 linear-gradient(180deg, #2a2019 0%, #1c1410 100%);
+        }
+
+        /* 3D Dice Styling & Animation */
+        .dice-3d {
+            width: 90px;
+            height: 90px;
+            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #e2e8f0 70%, #cbd5e1 100%);
+            border-radius: 18px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.9), inset 0 -3px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .dice-3d:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 15px 25px rgba(245, 158, 11, 0.4), inset 0 2px 5px rgba(255,255,255,0.9);
+        }
+
+        .dice-selected {
+            background: radial-gradient(circle at 30% 30%, #94a3b8 0%, #64748b 70%, #475569 100%);
+            opacity: 0.4;
+            transform: scale(0.92);
+            box-shadow: none !important;
+            filter: grayscale(80%);
+        }
+
+        @keyframes diceShakeAndRoll {
+            0% { transform: rotate(0deg) scale(1) translateY(0); }
+            20% { transform: rotate(-25deg) scale(1.15) translateY(-18px); }
+            40% { transform: rotate(30deg) scale(0.9) translateY(10px); }
+            60% { transform: rotate(-15deg) scale(1.1) translateY(-8px); }
+            80% { transform: rotate(10deg) scale(0.98) translateY(4px); }
+            100% { transform: rotate(0deg) scale(1) translateY(0); }
+        }
+
+        .rolling-anim {
+            animation: diceShakeAndRoll 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+        }
+
+        /* Player Colors */
+        .player1-theme {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%);
+            border-color: #3b82f6;
+        }
+        .player2-theme {
+            background: linear-gradient(135deg, #881337 0%, #4c0519 100%);
+            border-color: #f43f5e;
+        }
+
+        /* Shield Crest Styling */
+        .shield-svg {
+            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.3));
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen selection:bg-amber-500 selection:text-slate-900">
+
+    <!-- Top Medieval Header -->
+    <header class="bg-slate-950/90 border-b-2 border-amber-600/60 sticky top-0 z-50 shadow-2xl backdrop-blur-md">
+        <div class="max-w-5xl mx-auto px-4 py-2.5 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-yellow-400 p-0.5 shadow-lg flex items-center justify-center">
+                    <span class="text-2xl">👑</span>
+                </div>
+                <div>
+                    <h1 class="font-cinzel text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 tracking-wider">
+                        KINGDOMINO DUEL
+                    </h1>
+                    <p class="text-[10px] text-amber-200/70 font-semibold tracking-widest uppercase">Official Dice Rolling Companion</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button onclick="openRulesModal()" class="bg-amber-950/80 hover:bg-amber-900 border border-amber-600/50 text-amber-300 text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1 shadow">
+                    <span>📜 규칙</span>
+                </button>
+                <button onclick="resetGame()" class="bg-rose-950/80 hover:bg-rose-900 border border-rose-600/50 text-rose-300 text-xs px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1 shadow">
+                    <span>🔄 리셋</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-4 flex-grow w-full space-y-4">
+
+        <!-- STEP 1: MAIN DICE ROLLING & DRAFTING ARENA (MOVED TO TOP) -->
+        <section class="parchment-dark border-2 border-amber-600/50 rounded-3xl p-4 md:p-6 shadow-2xl relative overflow-hidden">
+            <!-- Background Decorative Crest Overlay -->
+            <div class="absolute right-0 top-0 translate-x-8 -translate-y-8 opacity-5 pointer-events-none text-9xl font-cinzel text-amber-400">
+                ⚔️
+            </div>
+
+            <!-- Dynamic Turn Indicator Header -->
+            <div id="draft-banner" class="rounded-2xl p-4 mb-5 text-center border shadow-xl transition-all duration-300 bg-slate-900 border-indigo-500/50">
+                <div id="banner-round-tag" class="text-xs uppercase font-extrabold tracking-widest text-amber-400 mb-1">ROUND 1</div>
+                <div id="banner-action-title" class="text-xl md:text-2xl font-black text-white">주사위를 굴려주세요!</div>
+                <p id="banner-action-sub" class="text-xs text-slate-300 mt-1 font-medium">선공 플레이어가 주사위 4개를 굴려 드래프트를 시작합니다.</p>
+            </div>
+
+            <!-- The 4 Physical Dice Display -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-5 mb-5" id="dice-container">
+                <!-- Die 1 Slot -->
+                <div id="die-card-0" class="bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px] transition-all relative">
+                    <span class="text-[11px] font-bold text-slate-400">주사위 I</span>
+                    <div id="die-graphic-0" class="my-2">
+                        <div class="dice-3d flex items-center justify-center">
+                            <span class="text-slate-400 font-bold text-xl">?</span>
+                        </div>
+                    </div>
+                    <div id="die-label-0" class="text-xs text-slate-300 font-bold text-center">대기 중</div>
+                    <button id="die-btn-0" onclick="selectDie(0)" class="mt-2 hidden w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold py-1.5 px-2 rounded-xl shadow-lg transition transform active:scale-95">
+                        선택하기
+                    </button>
+                </div>
+
+                <!-- Die 2 Slot -->
+                <div id="die-card-1" class="bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px] transition-all relative">
+                    <span class="text-[11px] font-bold text-slate-400">주사위 II</span>
+                    <div id="die-graphic-1" class="my-2">
+                        <div class="dice-3d flex items-center justify-center">
+                            <span class="text-slate-400 font-bold text-xl">?</span>
+                        </div>
+                    </div>
+                    <div id="die-label-1" class="text-xs text-slate-300 font-bold text-center">대기 중</div>
+                    <button id="die-btn-1" onclick="selectDie(1)" class="mt-2 hidden w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold py-1.5 px-2 rounded-xl shadow-lg transition transform active:scale-95">
+                        선택하기
+                    </button>
+                </div>
+
+                <!-- Die 3 Slot -->
+                <div id="die-card-2" class="bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px] transition-all relative">
+                    <span class="text-[11px] font-bold text-slate-400">주사위 III</span>
+                    <div id="die-graphic-2" class="my-2">
+                        <div class="dice-3d flex items-center justify-center">
+                            <span class="text-slate-400 font-bold text-xl">?</span>
+                        </div>
+                    </div>
+                    <div id="die-label-2" class="text-xs text-slate-300 font-bold text-center">대기 중</div>
+                    <button id="die-btn-2" onclick="selectDie(2)" class="mt-2 hidden w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold py-1.5 px-2 rounded-xl shadow-lg transition transform active:scale-95">
+                        선택하기
+                    </button>
+                </div>
+
+                <!-- Die 4 Slot -->
+                <div id="die-card-3" class="bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px] transition-all relative">
+                    <span class="text-[11px] font-bold text-slate-400">주사위 IV</span>
+                    <div id="die-graphic-3" class="my-2">
+                        <div class="dice-3d flex items-center justify-center">
+                            <span class="text-slate-400 font-bold text-xl">?</span>
+                        </div>
+                    </div>
+                    <div id="die-label-3" class="text-xs text-slate-300 font-bold text-center">대기 중</div>
+                    <button id="die-btn-3" onclick="selectDie(3)" class="mt-2 hidden w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-extrabold py-1.5 px-2 rounded-xl shadow-lg transition transform active:scale-95">
+                        선택하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Control Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button id="btn-roll" onclick="rollDice()" class="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-lg px-8 py-3.5 rounded-2xl shadow-2xl transition transform hover:scale-105 active:scale-95 flex items-center space-x-2 border-2 border-yellow-200">
+                    <span>🎲 주사위 4개 굴리기</span>
+                </button>
+                <button id="btn-undo" onclick="undoSelect()" class="hidden bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-sm px-4 py-3 rounded-2xl shadow-lg border border-amber-600/40 transition flex items-center space-x-1.5 transform active:scale-95">
+                    <span>↩️ 주사위 선택 취소</span>
+                </button>
+                <button id="btn-next-round" onclick="nextRound()" class="hidden bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-lg px-8 py-3.5 rounded-2xl shadow-2xl transition transform hover:scale-105 active:scale-95 flex items-center space-x-2 border-2 border-emerald-300">
+                    <span>➡️ 다음 라운드 진행 (선공 교대)</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- STEP 2: DISTINCT PLAYER DASHBOARDS (BLUE VS RED) -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- PLAYER 1 (BLUE KINGDOM) -->
+            <div id="p1-card" class="player1-theme rounded-2xl p-4 border-2 shadow-2xl transition-all duration-300 relative">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-2xl">👑</span>
+                        <input type="text" id="p1-name" value="블루 왕국 (P1)" class="bg-slate-900/60 font-black text-base text-blue-200 px-2 py-1 rounded-lg border border-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-400 w-44" onchange="updatePlayerNames()">
+                    </div>
+                    <span id="p1-badge" class="bg-blue-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">선공</span>
+                </div>
+                <div class="bg-slate-950/60 rounded-xl p-3 border border-blue-500/30">
+                    <div class="text-[11px] text-blue-300 font-bold uppercase mb-2">이번 라운드 획득 도미노 (주사위 2개)</div>
+                    <div id="p1-domino-preview" class="flex items-center space-x-3 min-h-[50px]">
+                        <span class="text-xs text-slate-400 italic">아직 선택된 주사위가 없습니다.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLAYER 2 (RED KINGDOM) -->
+            <div id="p2-card" class="player2-theme rounded-2xl p-4 border-2 shadow-2xl transition-all duration-300 relative">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-2xl">🛡️</span>
+                        <input type="text" id="p2-name" value="레드 왕국 (P2)" class="bg-slate-900/60 font-black text-base text-rose-200 px-2 py-1 rounded-lg border border-rose-400/50 focus:outline-none focus:ring-2 focus:ring-rose-400 w-44" onchange="updatePlayerNames()">
+                    </div>
+                    <span id="p2-badge" class="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full font-bold">후공</span>
+                </div>
+                <div class="bg-slate-950/60 rounded-xl p-3 border border-rose-500/30">
+                    <div class="text-[11px] text-rose-300 font-bold uppercase mb-2">이번 라운드 획득 도미노 (주사위 2개)</div>
+                    <div id="p2-domino-preview" class="flex items-center space-x-3 min-h-[50px]">
+                        <span class="text-xs text-slate-400 italic">아직 선택된 주사위가 없습니다.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 3: ACCORDION WIZARD SPELLS & MODIFIERS (MOVED DOWN) -->
+        <section class="bg-slate-900/90 border border-amber-600/40 rounded-2xl overflow-hidden shadow-xl">
+            <button onclick="toggleSpellsPanel()" class="w-full px-4 py-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 flex justify-between items-center hover:bg-slate-800 transition">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl">🧙‍♂️</span>
+                    <span class="text-sm font-bold text-amber-300">마법 및 특수 능력 (Wizard Spells & Modifiers)</span>
+                    <span class="text-[11px] bg-indigo-900/80 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-700/50">필요시 클릭</span>
+                </div>
+                <span id="spell-toggle-icon" class="text-amber-400 text-sm font-bold">▼ 펼치기</span>
+            </button>
+
+            <div id="spells-content" class="hidden p-4 border-t border-slate-800 bg-slate-950/80 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Spell 1: Starter takes 2 dice -->
+                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                        <div class="text-xs font-bold text-amber-300">선공 2개 즉시 선점 마법</div>
+                        <div class="text-[11px] text-slate-400 mt-1">선공 플레이어가 주사위 2개를 연속 선택합니다.</div>
+                        <div class="mt-2">
+                            <select id="spell-starter-choice" onchange="handleSpellChange()" class="w-full bg-slate-800 text-xs text-slate-200 rounded-lg p-1.5 border border-slate-600 focus:outline-none">
+                                <option value="none">사용 안 함</option>
+                                <option value="p1">블루 왕국(P1) 사용</option>
+                                <option value="p2">레드 왕국(P2) 사용</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Spell 2: Manipulate Face -->
+                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                        <div class="text-xs font-bold text-emerald-300">주사위 눈 원하는 대로 변경</div>
+                        <div class="text-[11px] text-slate-400 mt-1">주사위 1개의 면을 수동 조작합니다.</div>
+                        <div class="mt-2">
+                            <button onclick="openTransformModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold py-1.5 px-2 rounded-lg transition">
+                                🪄 주사위 면 조작하기
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Spell 3: Add Cross (+X) -->
+                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                        <div class="text-xs font-bold text-indigo-300">고위 성직자 추가 (+X)</div>
+                        <div class="text-[11px] text-slate-400 mt-1">선택할 주사위에 십자가(X)를 덧붙입니다.</div>
+                        <div class="mt-2 flex items-center">
+                            <label class="text-xs text-slate-200 flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="spell-add-cross" class="rounded text-amber-500 h-4 w-4 bg-slate-800 border-slate-600">
+                                <span>+X 효과 적용</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 4: ROUND HISTORY LOG -->
+        <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 shadow-lg">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center space-x-2">
+                <span>📜 라운드별 선택 히스토리</span>
+            </h3>
+            <div id="history-list" class="space-y-2 max-h-36 overflow-y-auto text-xs text-slate-300 pr-1">
+                <div class="text-slate-500 italic">아직 시작된 라운드가 없습니다.</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-500 text-center py-3 text-xs border-t border-slate-900">
+        <p>Kingdomino Duel Helper — Medieval Roll & Write Assistant</p>
+    </footer>
+
+    <!-- Dice Transform Modal (Wizard Power) -->
+    <div id="transform-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border-2 border-emerald-500/60 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-emerald-400 flex items-center space-x-2">
+                <span>🪄 주사위 면 수동 조작 (마법 능력)</span>
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold text-slate-400">1. 변경할 주사위 선택:</label>
+                    <select id="mod-die-index" onchange="updateModFaceOptions()" class="w-full mt-1 bg-slate-800 text-xs text-slate-200 rounded-lg p-2.5 border border-slate-700 font-bold">
+                        <option value="0">주사위 I (1번 주사위)</option>
+                        <option value="1">주사위 II (2번 주사위)</option>
+                        <option value="2">주사위 III (3번 주사위)</option>
+                        <option value="3">주사위 IV (4번 주사위)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-semibold text-slate-400">2. 적용할 주사위 면 선택 (클릭):</label>
+                        <div class="flex items-center space-x-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                            <span class="text-[10px] text-slate-400">현재 면:</span>
+                            <div id="mod-current-face-preview" class="w-5 h-5 flex items-center justify-center"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 6-Face Visual SVG Selection Grid -->
+                    <div id="mod-faces-grid" class="grid grid-cols-3 gap-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <!-- Populated dynamically with SVG cards -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button onclick="closeTransformModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-4 py-2 rounded-lg font-bold">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border-2 border-amber-500/60 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-amber-400 flex items-center space-x-2">
+                <span>📜 킹도미노 듀얼 핵심 규칙</span>
+            </h3>
+            <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <strong class="text-amber-300 block mb-1">🎲 드래프트 순서 (Draft Sequence)</strong>
+                    <p>1. 선공 플레이어가 주사위 4개를 굴려 <strong>1개</strong>를 먼저 가져갑니다.<br>
+                    2. 후공 플레이어가 남은 3개 중 <strong>2개</strong>를 선택합니다.<br>
+                    3. 선공 플레이어가 마지막 남은 <strong>1개</strong>를 가져갑니다.<br>
+                    (결과적으로 두 플레이어 모두 주사위 2개씩을 가져가 하나의 도미노를 완성합니다)</p>
+                </div>
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <strong class="text-amber-300 block mb-1">🔄 선공 교대 (Starter Rotation)</strong>
+                    <p>라운드가 끝나면 이번 라운드에 주사위를 굴리지 않은(후공이었던) 플레이어가 다음 라운드의 <strong>선공(시작 플레이어)</strong>이 됩니다.</p>
+                </div>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeRulesModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs px-5 py-2 rounded-lg font-extrabold">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Banner -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 border-2 border-amber-500 text-amber-300 px-4 py-3 rounded-2xl shadow-2xl hidden z-50 text-xs font-bold transition-all">
+        <span id="toast-msg">알림</span>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           SVG GENERATION LOGIC FOR REALISTIC DICE FACES (USER SPECIFIED SHIELD SVG)
+           ========================================================================== */
+        
+        // Helper to generate SVG Shield Graphic based on user-provided exact SVG spec
+        function generateShieldSVG(type, count = 1, crossCount = 0) {
+            // Wildcard (?) is drawn standalone matching dice specs
+            if (type === 'wild') {
+                return `
+                    <svg viewBox="0 0 100 120" class="w-full h-full shield-svg">
+                        <text x="50" y="80" font-family="'Cinzel', serif" font-size="75" font-weight="900" fill="#0f172a" text-anchor="middle">?</text>
+                    </svg>
+                `;
+            }
+
+            let innerGraphic = '';
+
+            // 1. Black Shield
+            if (type === 'shield_black') {
+                innerGraphic = `
+                    <use href="#shield" fill="black"/>
+                    <use href="#shield" fill="none" stroke="black" stroke-width="5"/>
+                    <use href="#shield" fill="none" stroke="white" stroke-width="2"/>
+                `;
+            } 
+            // 2. Dots
+            else if (type === 'dot') {
+                if (count === 1) {
+                    innerGraphic = `
+                        <use href="#shield" fill="white" stroke="black" stroke-width="5"/>
+                        <circle cx="50" cy="57" r="7" fill="black"/>
+                    `;
+                } else {
+                    innerGraphic = `
+                        <use href="#shield" fill="white" stroke="black" stroke-width="5"/>
+                        <circle cx="38" cy="57" r="6" fill="black"/>
+                        <circle cx="62" cy="57" r="6" fill="black"/>
+                    `;
+                }
+            } 
+            // 3. Diagonal Stripes
+            else if (type === 'stripe') {
+                if (count === 1) {
+                    innerGraphic = `
+                        <use href="#shield" fill="white"/>
+                        <g clip-path="url(#shieldClip)">
+                            <path d="M20,100 L85,15" stroke="black" stroke-width="15"/>
+                        </g>
+                        <use href="#shield" fill="none" stroke="black" stroke-width="5"/>
+                    `;
+                } else {
+                    innerGraphic = `
+                        <use href="#shield" fill="white"/>
+                        <g clip-path="url(#shieldClip)">
+                            <path d="M15,100 L80,15 M38,115 L103,30" stroke="black" stroke-width="13"/>
+                        </g>
+                        <use href="#shield" fill="none" stroke="black" stroke-width="5"/>
+                    `;
+                }
+            } 
+            // 4. Quartered Shield
+            else if (type === 'shield_quarter') {
+                innerGraphic = `
+                    <use href="#shield" fill="white"/>
+                    <g clip-path="url(#shieldClip)">
+                        <path d="M0,0 L50,0 L50,60 L0,60 Z" fill="black"/>
+                        <path d="M50,60 L100,60 L100,120 L50,120 Z" fill="black"/>
+                    </g>
+                    <use href="#shield" fill="none" stroke="black" stroke-width="5"/>
+                `;
+            }
+
+            // Cross (X) Graphics (Supports 0, 1, or 2 X's)
+            let crossGraphics = '';
+            if (crossCount === 1) {
+                crossGraphics = `
+                    <g transform="translate(82,102)">
+                        <path d="M0,0 L12,12 M12,0 L0,12" stroke="black" stroke-width="3"/>
+                    </g>`;
+            } else if (crossCount === 2) {
+                crossGraphics = `
+                    <g transform="translate(68,102)">
+                        <path d="M0,0 L11,11 M11,0 L0,11" stroke="black" stroke-width="3"/>
+                    </g>
+                    <g transform="translate(83,102)">
+                        <path d="M0,0 L11,11 M11,0 L0,11" stroke="black" stroke-width="3"/>
+                    </g>`;
+            }
+
+            // Return full SVG container using user's EXACT viewBox and Shield Defs
+            return `
+                <svg viewBox="0 0 100 120" class="w-full h-full shield-svg overflow-visible" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <path id="shield" d="M 10,8 L 90,8 L 96,43 Q 92,91 50,116 Q 8,91 4,43 Z"/>
+                        <clipPath id="shieldClip">
+                            <use href="#shield"/>
+                        </clipPath>
+                    </defs>
+                    <g>
+                        ${innerGraphic}
+                        ${crossGraphics}
+                    </g>
+                </svg>
+            `;
+        }
+
+        /* ==========================================================================
+           EXACT 4 DICE CONFIGURATIONS (ACCORDING TO OFFICIAL GAME SPECS)
+           ========================================================================== */
+        const DICE_CONFIGS = [
+            // Dice 1
+            [
+                { name: '와일드카드 (?)', type: 'wild', cross: 0 },
+                { name: '점 1개', type: 'dot', count: 1, cross: 0 },
+                { name: '줄무늬 2개 + X', type: 'stripe', count: 2, cross: 1 },
+                { name: '줄무늬 1개', type: 'stripe', count: 1, cross: 0 },
+                { name: '점 2개 + X', type: 'dot', count: 2, cross: 1 },
+                { name: '점 1개', type: 'dot', count: 1, cross: 0 }
+            ],
+            // Dice 2
+            [
+                { name: '점 2개 + X', type: 'dot', count: 2, cross: 1 },
+                { name: '사분할 방패', type: 'shield_quarter', count: 1, cross: 0 },
+                { name: '줄무늬 1개', type: 'stripe', count: 1, cross: 0 },
+                { name: '검은색 방패', type: 'shield_black', count: 1, cross: 0 },
+                { name: '점 1개', type: 'dot', count: 1, cross: 0 },
+                { name: '줄무늬 2개 + X', type: 'stripe', count: 2, cross: 1 }
+            ],
+            // Dice 3
+            [
+                { name: '줄무늬 1개', type: 'stripe', count: 1, cross: 0 },
+                { name: '점 2개', type: 'dot', count: 2, cross: 0 },
+                { name: '검은색 방패 + 2X', type: 'shield_black', count: 1, cross: 2 },
+                { name: '점 1개', type: 'dot', count: 1, cross: 0 },
+                { name: '사분할 방패 + 2X', type: 'shield_quarter', count: 1, cross: 2 },
+                { name: '줄무늬 2개', type: 'stripe', count: 2, cross: 0 }
+            ],
+            // Dice 4
+            [
+                { name: '줄무늬 1개 + X', type: 'stripe', count: 1, cross: 1 },
+                { name: '줄무늬 2개', type: 'stripe', count: 2, cross: 0 },
+                { name: '와일드카드 (?)', type: 'wild', cross: 0 },
+                { name: '점 1개 + X', type: 'dot', count: 1, cross: 1 },
+                { name: '점 2개', type: 'dot', count: 2, cross: 0 },
+                { name: '줄무늬 1개', type: 'stripe', count: 1, cross: 0 }
+            ]
+        ];
+
+        /* ==========================================================================
+           GAME STATE ENGINE
+           ========================================================================== */
+        let gameState = {
+            round: 1,
+            starterPlayer: 0, // 0: Player 1 (Blue), 1: Player 2 (Red)
+            p1Name: '블루 왕국 (P1)',
+            p2Name: '레드 왕국 (P2)',
+            currentDice: [null, null, null, null],
+            selectedDice: [false, false, false, false],
+            draftStep: 'WAITING_ROLL',
+            p1Picks: [],
+            p2Picks: [],
+            history: [],
+            pickHistoryStack: [] // For Undo feature
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 2800);
+        }
+
+        function updatePlayerNames() {
+            gameState.p1Name = document.getElementById('p1-name').value || '블루 왕국';
+            gameState.p2Name = document.getElementById('p2-name').value || '레드 왕국';
+            updateUI();
+        }
+
+        function toggleSpellsPanel() {
+            const content = document.getElementById('spells-content');
+            const icon = document.getElementById('spell-toggle-icon');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.innerText = '▲ 접기';
+            } else {
+                content.classList.add('hidden');
+                icon.innerText = '▼ 펼치기';
+            }
+        }
+
+        function rollDice() {
+            // Apply Dice Rolling Animation to all 4 dice graphics
+            for (let i = 0; i < 4; i++) {
+                const graphicElem = document.getElementById(`die-graphic-${i}`).querySelector('.dice-3d');
+                if (graphicElem) {
+                    graphicElem.classList.remove('rolling-anim');
+                    void graphicElem.offsetWidth; // trigger reflow
+                    graphicElem.classList.add('rolling-anim');
+                }
+            }
+
+            // Roll random faces for the 4 dice
+            gameState.currentDice = DICE_CONFIGS.map(dieFaces => {
+                const idx = Math.floor(Math.random() * dieFaces.length);
+                return { ...dieFaces[idx] };
+            });
+
+            gameState.selectedDice = [false, false, false, false];
+            gameState.p1Picks = [];
+            gameState.p2Picks = [];
+            gameState.pickHistoryStack = [];
+
+            // Check if starter uses spell to take 2 dice right away
+            const spellStarterChoice = document.getElementById('spell-starter-choice').value;
+            if (spellStarterChoice === (gameState.starterPlayer === 0 ? 'p1' : 'p2')) {
+                gameState.draftStep = 'STARTER_PICK_2_1';
+                showToast('🧙‍♂️ 선공 마법 적용: 주사위 2개를 잇달아 선택합니다!');
+            } else {
+                gameState.draftStep = 'STARTER_PICK_1';
+            }
+
+            updateUI();
+        }
+
+        function selectDie(dieIndex) {
+            if (gameState.selectedDice[dieIndex]) return;
+
+            const starterName = gameState.starterPlayer === 0 ? gameState.p1Name : gameState.p2Name;
+            const oppName = gameState.starterPlayer === 0 ? gameState.p2Name : gameState.p1Name;
+            const spellStarterChoice = document.getElementById('spell-starter-choice').value;
+            const hasStarterSpell = (spellStarterChoice === (gameState.starterPlayer === 0 ? 'p1' : 'p2'));
+
+            // Record snapshot for Undo before state change
+            gameState.pickHistoryStack.push({
+                dieIndex: dieIndex,
+                prevDraftStep: gameState.draftStep,
+                recipient: (gameState.draftStep.startsWith('STARTER') || gameState.draftStep === 'STARTER_PICK_LAST') ? 'p1' : 'p2'
+            });
+
+            if (gameState.draftStep === 'STARTER_PICK_1') {
+                gameState.selectedDice[dieIndex] = true;
+                (gameState.starterPlayer === 0 ? gameState.p1Picks : gameState.p2Picks).push(gameState.currentDice[dieIndex]);
+                gameState.draftStep = 'OPPONENT_PICK_2_1';
+                showToast(`${starterName}님이 주사위 1개를 가져갔습니다.`);
+            } 
+            else if (gameState.draftStep === 'STARTER_PICK_2_1') {
+                gameState.selectedDice[dieIndex] = true;
+                (gameState.starterPlayer === 0 ? gameState.p1Picks : gameState.p2Picks).push(gameState.currentDice[dieIndex]);
+                gameState.draftStep = 'STARTER_PICK_2_2';
+                showToast(`${starterName}님이 첫 번째 주사위를 골랐습니다.`);
+            }
+            else if (gameState.draftStep === 'STARTER_PICK_2_2') {
+                gameState.selectedDice[dieIndex] = true;
+                (gameState.starterPlayer === 0 ? gameState.p1Picks : gameState.p2Picks).push(gameState.currentDice[dieIndex]);
+                gameState.draftStep = 'OPPONENT_PICK_1_FINAL';
+                showToast(`${starterName}님이 마법으로 2개 모두 선택 완료!`);
+            }
+            else if (gameState.draftStep === 'OPPONENT_PICK_2_1' || gameState.draftStep === 'OPPONENT_PICK_2_2') {
+                gameState.selectedDice[dieIndex] = true;
+                (gameState.starterPlayer === 0 ? gameState.p2Picks : gameState.p1Picks).push(gameState.currentDice[dieIndex]);
+
+                const unselectedCount = gameState.selectedDice.filter(s => !s).length;
+                if (unselectedCount === 1 && !hasStarterSpell) {
+                    gameState.draftStep = 'STARTER_PICK_LAST';
+                } else if (unselectedCount === 1 && hasStarterSpell) {
+                    gameState.draftStep = 'OPPONENT_PICK_LAST';
+                } else {
+                    gameState.draftStep = 'OPPONENT_PICK_2_2';
+                }
+                showToast(`${oppName}님이 주사위를 선택했습니다.`);
+            }
+            else if (gameState.draftStep === 'OPPONENT_PICK_1_FINAL') {
+                gameState.selectedDice[dieIndex] = true;
+                (gameState.starterPlayer === 0 ? gameState.p2Picks : gameState.p1Picks).push(gameState.currentDice[dieIndex]);
+                gameState.draftStep = 'OPPONENT_PICK_LAST_2';
+                showToast(`${oppName}님이 주사위를 선택했습니다.`);
+            }
+            else if (gameState.draftStep === 'STARTER_PICK_LAST' || gameState.draftStep === 'OPPONENT_PICK_LAST' || gameState.draftStep === 'OPPONENT_PICK_LAST_2') {
+                gameState.selectedDice[dieIndex] = true;
+                const recipient = (gameState.draftStep === 'STARTER_PICK_LAST') 
+                    ? (gameState.starterPlayer === 0 ? gameState.p1Picks : gameState.p2Picks)
+                    : (gameState.starterPlayer === 0 ? gameState.p2Picks : gameState.p1Picks);
+                recipient.push(gameState.currentDice[dieIndex]);
+
+                gameState.draftStep = 'ROUND_DONE';
+                showToast('드래프트 완료! 실물 시트에 도미노를 그려주세요.');
+                recordHistory();
+            }
+
+            updateUI();
+        }
+
+        function undoSelect() {
+            if (gameState.pickHistoryStack.length === 0) return;
+
+            const lastAction = gameState.pickHistoryStack.pop();
+            const dieIdx = lastAction.dieIndex;
+
+            gameState.selectedDice[dieIdx] = false;
+            gameState.draftStep = lastAction.prevDraftStep;
+
+            // Remove from player picks
+            if (gameState.p1Picks.length > 0 && gameState.p1Picks[gameState.p1Picks.length - 1] === gameState.currentDice[dieIdx]) {
+                gameState.p1Picks.pop();
+            } else if (gameState.p2Picks.length > 0 && gameState.p2Picks[gameState.p2Picks.length - 1] === gameState.currentDice[dieIdx]) {
+                gameState.p2Picks.pop();
+            }
+
+            // Remove history if round was completed
+            if (gameState.draftStep !== 'ROUND_DONE' && gameState.history.length > 0) {
+                const historyList = document.getElementById('history-list');
+                if (historyList.firstChild) {
+                    historyList.removeChild(historyList.firstChild);
+                }
+                gameState.history.pop();
+            }
+
+            updateUI();
+            showToast('↩️ 최근 주사위 선택을 취소했습니다.');
+        }
+
+        function updateUI() {
+            const p1Name = gameState.p1Name;
+            const p2Name = gameState.p2Name;
+            const starterName = gameState.starterPlayer === 0 ? p1Name : p2Name;
+            const oppName = gameState.starterPlayer === 0 ? p2Name : p1Name;
+
+            // Update Player Card Theme & Badges
+            const p1Card = document.getElementById('p1-card');
+            const p2Card = document.getElementById('p2-card');
+            const p1Badge = document.getElementById('p1-badge');
+            const p2Badge = document.getElementById('p2-badge');
+
+            if (gameState.starterPlayer === 0) {
+                p1Card.className = "player1-theme rounded-2xl p-4 border-2 border-blue-400 shadow-2xl ring-4 ring-blue-500/30";
+                p1Badge.className = "bg-blue-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md animate-pulse";
+                p1Badge.innerText = "👑 시작 플레이어 (선공)";
+
+                p2Card.className = "player2-theme rounded-2xl p-4 border-2 border-slate-700/60 opacity-85";
+                p2Badge.className = "bg-slate-800 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold";
+                p2Badge.innerText = "후공";
+            } else {
+                p2Card.className = "player2-theme rounded-2xl p-4 border-2 border-rose-400 shadow-2xl ring-4 ring-rose-500/30";
+                p2Badge.className = "bg-rose-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md animate-pulse";
+                p2Badge.innerText = "👑 시작 플레이어 (선공)";
+
+                p1Card.className = "player1-theme rounded-2xl p-4 border-2 border-slate-700/60 opacity-85";
+                p1Badge.className = "bg-slate-800 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold";
+                p1Badge.innerText = "후공";
+            }
+
+            // Render Dice Cards & Realistic SVG Faces
+            for (let i = 0; i < 4; i++) {
+                const dieCard = document.getElementById(`die-card-${i}`);
+                const dieGraphic = document.getElementById(`die-graphic-${i}`);
+                const dieLabel = document.getElementById(`die-label-${i}`);
+                const dieBtn = document.getElementById(`die-btn-${i}`);
+
+                const die = gameState.currentDice[i];
+                const isSelected = gameState.selectedDice[i];
+
+                if (!die) {
+                    dieGraphic.innerHTML = `
+                        <div class="dice-3d flex items-center justify-center">
+                            <span class="text-slate-400 font-extrabold text-2xl">?</span>
+                        </div>`;
+                    dieLabel.innerText = "대기 중";
+                    dieCard.className = "bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px]";
+                    dieBtn.classList.add('hidden');
+                } else {
+                    const svgMarkup = generateShieldSVG(die.type, die.count, die.cross);
+                    
+                    if (isSelected) {
+                        dieGraphic.innerHTML = `
+                            <div class="dice-3d dice-selected flex items-center justify-center">
+                                ${svgMarkup}
+                            </div>`;
+                        dieLabel.innerText = die.name;
+                        dieCard.className = "bg-slate-900/40 border-2 border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px] opacity-40";
+                        dieBtn.classList.add('hidden');
+                    } else {
+                        dieGraphic.innerHTML = `
+                            <div class="dice-3d flex items-center justify-center">
+                                ${svgMarkup}
+                            </div>`;
+                        dieLabel.innerText = die.name;
+                        dieCard.className = "bg-slate-900 border-2 border-amber-500/70 rounded-2xl p-3 flex flex-col items-center justify-between min-h-[175px] shadow-xl hover:border-amber-400";
+                        if (gameState.draftStep !== 'WAITING_ROLL' && gameState.draftStep !== 'ROUND_DONE') {
+                            dieBtn.classList.remove('hidden');
+                        } else {
+                            dieBtn.classList.add('hidden');
+                        }
+                    }
+                }
+            }
+
+            // Render Domino Previews for P1 & P2
+            renderDominoPreview('p1-domino-preview', gameState.p1Picks);
+            renderDominoPreview('p2-domino-preview', gameState.p2Picks);
+
+            // Update Draft Instruction Banner & Action Buttons
+            const bannerRoundTag = document.getElementById('banner-round-tag');
+            const bannerTitle = document.getElementById('banner-action-title');
+            const bannerSub = document.getElementById('banner-action-sub');
+            const draftBanner = document.getElementById('draft-banner');
+            const btnRoll = document.getElementById('btn-roll');
+            const btnUndo = document.getElementById('btn-undo');
+            const btnNextRound = document.getElementById('btn-next-round');
+
+            bannerRoundTag.innerText = `ROUND ${gameState.round}`;
+
+            if (gameState.starterPlayer === 0) {
+                draftBanner.className = "rounded-2xl p-4 mb-5 text-center border shadow-xl transition-all duration-300 bg-blue-950/80 border-blue-500/50";
+            } else {
+                draftBanner.className = "rounded-2xl p-4 mb-5 text-center border shadow-xl transition-all duration-300 bg-rose-950/80 border-rose-500/50";
+            }
+
+            // Toggle Undo Button visibility
+            if (gameState.pickHistoryStack.length > 0) {
+                btnUndo.classList.remove('hidden');
+            } else {
+                btnUndo.classList.add('hidden');
+            }
+
+            if (gameState.draftStep === 'WAITING_ROLL') {
+                bannerTitle.innerText = `${starterName}님의 차례입니다!`;
+                bannerSub.innerText = "아래 버튼을 눌러 주사위 4개를 굴려주세요.";
+                btnRoll.classList.remove('hidden');
+                btnNextRound.classList.add('hidden');
+            } else if (gameState.draftStep === 'STARTER_PICK_1') {
+                bannerTitle.innerText = `${starterName}님, 주사위 1개를 선택하세요.`;
+                bannerSub.innerText = "남은 3개 중 상대 플레이어가 2개를 선택하게 됩니다.";
+                btnRoll.classList.add('hidden');
+                btnNextRound.classList.remove('hidden');
+            } else if (gameState.draftStep === 'STARTER_PICK_2_1' || gameState.draftStep === 'STARTER_PICK_2_2') {
+                bannerTitle.innerText = `🧙‍♂️ ${starterName}님, 주사위 2개를 계속 선택하세요.`;
+                bannerSub.innerText = "마법의 힘으로 선공이 먼저 2개를 가져갑니다.";
+                btnRoll.classList.add('hidden');
+                btnNextRound.classList.remove('hidden');
+            } else if (gameState.draftStep === 'OPPONENT_PICK_2_1' || gameState.draftStep === 'OPPONENT_PICK_2_2') {
+                bannerTitle.innerText = `${oppName}님, 주사위 2개를 선택하세요.`;
+                bannerSub.innerText = "남은 3개 중 2개를 차례로 고릅니다.";
+                btnRoll.classList.add('hidden');
+                btnNextRound.classList.remove('hidden');
+            } else if (gameState.draftStep === 'OPPONENT_PICK_1_FINAL') {
+                bannerTitle.innerText = `${oppName}님, 남은 주사위 1개를 선택하세요.`;
+                bannerSub.innerText = "상대방이 먼저 2개를 선택했습니다.";
+                btnRoll.classList.add('hidden');
+                btnNextRound.classList.remove('hidden');
+            } else if (gameState.draftStep.includes('LAST')) {
+                bannerTitle.innerText = `마지막 남은 주사위를 선택하세요.`;
+                bannerSub.innerText = "마지막 주사위를 가져가 도미노를 완성합니다.";
+                btnRoll.classList.add('hidden');
+                btnNextRound.classList.remove('hidden');
+            } else if (gameState.draftStep === 'ROUND_DONE') {
+                bannerTitle.innerText = `✨ 이번 라운드 드래프트 완료!`;
+                bannerSub.innerText = "시트지에 기록 후 아래 버튼을 누르면 다음 라운드로 넘어가며 선공이 자동으로 교대됩니다.";
+                btnRoll.classList.add('hidden');
+                btnNextRound.classList.remove('hidden');
+            }
+        }
+
+        function renderDominoPreview(containerId, picks) {
+            const container = document.getElementById(containerId);
+            if (!picks || picks.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400 italic">아직 선택된 주사위가 없습니다.</span>`;
+                return;
+            }
+
+            let html = '';
+            picks.forEach((die, idx) => {
+                if (idx > 0) html += `<span class="text-amber-400 font-black text-sm">+</span>`;
+                const svgMarkup = generateShieldSVG(die.type, die.count, die.cross);
+                html += `
+                    <div class="flex items-center space-x-1.5 bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-700 shadow">
+                        <div class="scale-75 origin-center w-8 h-8 flex items-center justify-center">${svgMarkup}</div>
+                        <span class="text-xs font-bold text-amber-200">${die.name}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function nextRound() {
+            // Record history before resetting for next round if dice were rolled
+            if (gameState.draftStep !== 'WAITING_ROLL' && gameState.draftStep !== 'ROUND_DONE') {
+                recordHistory();
+            }
+
+            document.getElementById('spell-add-cross').checked = false;
+
+            // Rotate Starter Player ("주사위를 굴리지 않은 플레이어가 다음 시작 플레이어")
+            gameState.starterPlayer = 1 - gameState.starterPlayer;
+            gameState.round++;
+            gameState.draftStep = 'WAITING_ROLL';
+            gameState.currentDice = [null, null, null, null];
+            gameState.selectedDice = [false, false, false, false];
+            gameState.p1Picks = [];
+            gameState.p2Picks = [];
+            gameState.pickHistoryStack = [];
+
+            updateUI();
+            showToast(`라운드 ${gameState.round} 시작! 선공이 교대되었습니다.`);
+        }
+
+        function recordHistory() {
+            const historyList = document.getElementById('history-list');
+            if (gameState.history.length === 0) historyList.innerHTML = '';
+
+            const p1Str = gameState.p1Picks.length > 0 ? gameState.p1Picks.map(d => d.name).join(' + ') : '선택 안 함';
+            const p2Str = gameState.p2Picks.length > 0 ? gameState.p2Picks.map(d => d.name).join(' + ') : '선택 안 함';
+
+            const item = document.createElement('div');
+            item.className = "bg-slate-950/80 p-2 rounded-xl border border-slate-800 flex justify-between items-center text-[11px]";
+            item.innerHTML = `
+                <span class="font-extrabold text-amber-400">R${gameState.round}</span>
+                <span class="text-blue-300 font-medium">${gameState.p1Name}: [${p1Str}]</span>
+                <span class="text-slate-500 font-bold">VS</span>
+                <span class="text-rose-300 font-medium">${gameState.p2Name}: [${p2Str}]</span>
+            `;
+            historyList.prepend(item);
+            gameState.history.push(true);
+        }
+
+        function resetGame() {
+            gameState.round = 1;
+            gameState.starterPlayer = 0;
+            gameState.draftStep = 'WAITING_ROLL';
+            gameState.currentDice = [null, null, null, null];
+            gameState.selectedDice = [false, false, false, false];
+            gameState.p1Picks = [];
+            gameState.p2Picks = [];
+            gameState.history = [];
+            gameState.pickHistoryStack = [];
+            document.getElementById('history-list').innerHTML = '<div class="text-slate-500 italic">아직 시작된 라운드가 없습니다.</div>';
+            updateUI();
+            showToast('게임이 초기화되었습니다.');
+        }
+
+        function openTransformModal() {
+            if (gameState.draftStep === 'WAITING_ROLL') {
+                showToast('주사위를 먼저 굴려주세요.');
+                return;
+            }
+            document.getElementById('transform-modal').classList.remove('hidden');
+            document.getElementById('transform-modal').classList.add('flex');
+            updateModFaceOptions();
+        }
+
+        function closeTransformModal() {
+            document.getElementById('transform-modal').classList.add('hidden');
+            document.getElementById('transform-modal').classList.remove('flex');
+        }
+
+        function openRulesModal() {
+            document.getElementById('rules-modal').classList.remove('hidden');
+            document.getElementById('rules-modal').classList.add('flex');
+        }
+
+        function closeRulesModal() {
+            document.getElementById('rules-modal').classList.add('hidden');
+            document.getElementById('rules-modal').classList.remove('flex');
+        }
+
+        // Populate visual SVG grid of the 6 faces belonging to the selected die
+        function updateModFaceOptions() {
+            const dieIdx = parseInt(document.getElementById('mod-die-index').value);
+            const gridContainer = document.getElementById('mod-faces-grid');
+            const currentPreview = document.getElementById('mod-current-face-preview');
+            const faces = DICE_CONFIGS[dieIdx];
+
+            // Render current rolled face preview
+            const currentDie = gameState.currentDice[dieIdx];
+            if (currentDie) {
+                currentPreview.innerHTML = generateShieldSVG(currentDie.type, currentDie.count, currentDie.cross);
+            } else {
+                currentPreview.innerHTML = `<span class="text-xs text-slate-500">?</span>`;
+            }
+
+            gridContainer.innerHTML = '';
+            faces.forEach((face, index) => {
+                const svgMarkup = generateShieldSVG(face.type, face.count, face.cross);
+                const isCurrent = currentDie && (currentDie.name === face.name);
+
+                const card = document.createElement('div');
+                card.className = `cursor-pointer rounded-xl p-2.5 flex flex-col items-center justify-between border-2 transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+                    isCurrent ? 'bg-amber-950/60 border-amber-500 shadow-lg ring-2 ring-amber-500/40' : 'bg-slate-900 border-slate-700 hover:border-emerald-500/70 hover:bg-slate-800'
+                }`;
+                card.onclick = () => applyDieTransformation(dieIdx, index);
+
+                card.innerHTML = `
+                    <div class="w-12 h-12 flex items-center justify-center my-1">
+                        ${svgMarkup}
+                    </div>
+                    <span class="text-[11px] font-extrabold text-slate-200 text-center mt-1">${face.name}</span>
+                    ${isCurrent ? '<span class="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded font-black mt-1">현재</span>' : ''}
+                `;
+                gridContainer.appendChild(card);
+            });
+        }
+
+        function applyDieTransformation(dieIdx, faceIdx) {
+            const targetFace = DICE_CONFIGS[dieIdx][faceIdx];
+            gameState.currentDice[dieIdx] = { ...targetFace };
+            closeTransformModal();
+            updateUI();
+            showToast(`주사위 ${dieIdx + 1}번의 면을 '${targetFace.name}'(으)로 변환했습니다!`);
+        }
+
+        function handleSpellChange() { updateUI(); }
+
+        window.onload = function() {
+            updateUI();
+        };
+    </script>
+</body>
+</html>
